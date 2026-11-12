@@ -12,9 +12,10 @@ const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
 const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // ---------- Renderer / Szene ----------
+const isTouch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 const canvas = $('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouch, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 2));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
@@ -49,7 +50,7 @@ const hemi = new THREE.HemisphereLight(0xcfe6ff, 0xdfe8f5, 0.75);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
 const sc = sun.shadow.camera;
 sc.left = -60;
 sc.right = 60;
@@ -90,7 +91,7 @@ const mountains = new THREE.Group();
 
 const world = new World(scene);
 const spray = new Spray(scene);
-const snowfall = new Snowfall(scene);
+const snowfall = new Snowfall(scene, isTouch ? 600 : 1400);
 const skier = createSkier();
 scene.add(skier.root);
 const audio = new GameAudio();
@@ -116,24 +117,42 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
 
-// Touch: linke/rechte Bildschirmhälfte lenken, zwei Finger = Sprung, Wischen runter = ducken
+// Touch: linke/rechte Bildschirmhälfte lenkt, Buttons unten Mitte: Ducken/Salto und Sprung
 const touch = { left: false, right: false, tuck: false };
-function readTouches(ev) {
-  const w = window.innerWidth;
-  touch.left = touch.right = false;
-  for (const t of ev.touches) {
-    if (t.clientX < w / 2) touch.left = true;
-    else touch.right = true;
+const touchRoles = new Map(); // Finger-ID -> left | right | tuck | jump
+function roleFor(t) {
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  const b = el && el.closest ? el.closest('[data-btn]') : null;
+  if (b) return b.dataset.btn;
+  return t.clientX < window.innerWidth / 2 ? 'left' : 'right';
+}
+function syncTouch() {
+  touch.left = touch.right = touch.tuck = false;
+  for (const r of touchRoles.values()) {
+    if (r === 'left') touch.left = true;
+    else if (r === 'right') touch.right = true;
+    else if (r === 'tuck') touch.tuck = true;
   }
-  touch.tuck = ev.touches.length >= 2 && touch.left && touch.right;
+  $('b-tuck').classList.toggle('on', touch.tuck);
 }
 window.addEventListener('touchstart', (e) => {
   audio.init();
-  if (state !== 'playing') startEdge = true;
-  readTouches(e);
+  for (const t of e.changedTouches) {
+    const role = roleFor(t);
+    touchRoles.set(t.identifier, role);
+    if (role === 'jump') jumpEdge = true;
+    if (state !== 'playing' && role !== 'jump' && role !== 'tuck') startEdge = true;
+  }
+  syncTouch();
 }, { passive: true });
-window.addEventListener('touchmove', readTouches, { passive: true });
-window.addEventListener('touchend', readTouches, { passive: true });
+const touchEnd = (e) => {
+  for (const t of e.changedTouches) touchRoles.delete(t.identifier);
+  syncTouch();
+  audio.init();
+};
+window.addEventListener('touchend', touchEnd, { passive: true });
+window.addEventListener('touchcancel', touchEnd, { passive: true });
+if (isTouch) document.body.classList.add('touch');
 $('start').addEventListener('click', () => {
   audio.init();
   startEdge = true;
@@ -146,10 +165,10 @@ function readInput() {
   const left = keys.has('ArrowLeft') || keys.has('KeyA') || touch.left;
   const right = keys.has('ArrowRight') || keys.has('KeyD') || touch.right;
   const up = keys.has('ArrowUp') || keys.has('KeyW');
-  const down = keys.has('ArrowDown') || keys.has('KeyS');
+  const down = keys.has('ArrowDown') || keys.has('KeyS') || touch.tuck;
   return {
     steer: (right ? 1 : 0) - (left ? 1 : 0),
-    tuck: down || touch.tuck,
+    tuck: down,
     brake: keys.has('ShiftLeft') || keys.has('ShiftRight'),
     jump: keys.has('Space'),
     jumpPressed: jumpEdge,
@@ -211,6 +230,7 @@ function startRun() {
   $('menu').classList.add('hidden');
   $('over').classList.add('hidden');
   $('hud').classList.remove('hidden');
+  $('touchui').classList.toggle('hidden', !isTouch);
   audio.start();
 }
 
@@ -366,8 +386,10 @@ function updateCamera(dt) {
     const wantFov = 62 + clampN(sp, 0, 70) * 0.5 + (sim.grounded ? 0 : 4);
     fov = damp(fov, wantFov, 3, dt);
   }
-  if (Math.abs(camera.fov - fov) > 0.01) {
-    camera.fov = fov;
+  // Hochformat (Handy): größeres vertikales Sichtfeld, damit die Piste breit genug wirkt
+  const f = Math.min(105, fov * (camera.aspect < 1 ? 1.3 : 1));
+  if (Math.abs(camera.fov - f) > 0.01) {
+    camera.fov = f;
     camera.updateProjectionMatrix();
   }
 }

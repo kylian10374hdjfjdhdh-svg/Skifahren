@@ -73,3 +73,32 @@ h1 span { color: var(--accent); }
 .stats span { display: block; font-size: 18px; font-weight: 800; }
 .stats small { font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.7; }
 @media (max-width: 520px) { .stats { grid-template-columns: 1fr 1fr; } .controls { grid-template-columns: 1fr; } }
+
+/* Touch-Bedienung */
+#touchui { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; justify-content: center; gap: 14px;
+  padding: 0 16px calc(18px + env(safe-area-inset-bottom, 0px)); pointer-events: none; }
+.tbtn { pointer-events: auto; min-width: 118px; padding: 16px 14px; text-align: center; border-radius: 14px; font-weight: 900; font-style: italic;
+  letter-spacing: 1px; font-size: 17px; background: rgba(11,18,32,0.55); border: 2px solid rgba(255,255,255,0.35);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); touch-action: none; }
+.tbtn small { display: block; font-size: 9.5px; font-weight: 600; letter-spacing: 0.5px; font-style: normal; opacity: 0.75; margin-top: 2px; }
+.tbtn.jump { background: var(--accent); border-color: rgba(255,255,255,0.6); }
+.tbtn.on { background: rgba(111,211,255,0.55); }
+.screen { z-index: 10; }
+.touch-help, .touch-only { display: none; }
+body.touch .controls { display: none; }
+body.touch .touch-help { display: grid; gap: 8px; margin: 20px 0 14px; text-align: left; font-size: 13px; }
+body.touch .touch-help div { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+body.touch .touch-only { display: inline; }
+body.touch .hud-left { bottom: auto; top: 40px; }
+body.touch .speed { font-size: clamp(44px, 9vw, 72px); }
+body.touch .mute { display: none; }
+@media (max-height: 460px) {
+  .panel { padding: 16px 20px; max-height: 100%; overflow: auto; }
+  h1 { font-size: 48px; margin: 0; }
+  .m-best { margin-bottom: 8px; }
+  .cta { padding: 10px 34px; font-size: 18px; }
+  body.touch .touch-help { grid-template-columns: repeat(3, 1fr); margin: 10px 0 8px; font-size: 11px; }
+  .tip { display: none; }
+  .final { font-size: 52px; }
+  .stats { margin: 8px 0 12px; grid-template-columns: repeat(4, 1fr); }
+}
