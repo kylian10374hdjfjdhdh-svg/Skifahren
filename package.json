@@ -1,0 +1,11 @@
+{
+  "name": "skifahren",
+  "version": "0.1.0",
+  "description": "Endloses 3D-Skirennen im Browser: Carven, Sprünge, Tricks, Highscore-Jagd.",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node tests/sim.test.js"
+  },
+  "license": "MIT"
+}
