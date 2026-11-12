@@ -36,7 +36,7 @@ export function kickerForCell(k) {
   return { z0, x0, w: 7 + hash(k * 9.9) * 3 };
 }
 
-function kickerHeight(x, z) {
+export function kickerHeight(x, z) {
   const kc = Math.floor(-z / CELL);
   let h = 0;
   for (let k = kc - 1; k <= kc + 1; k++) {

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Skifahren</title>
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vignette"></div>
+
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <div class="speed"><span id="speed">0</span><small>km/h</small></div>
+    <div class="dist" id="dist">0 m</div>
+  </div>
+  <div class="hud-right">
+    <div class="score" id="score">0</div>
+    <div class="best" id="best"></div>
+    <div id="combowrap" class="hidden"><div id="combo" class="combo">x1.0</div><div class="bar"><div id="combobar"></div></div></div>
+  </div>
+  <div id="popups"></div>
+  <div class="mute" id="mute">Ton an (M)</div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="eyebrow">Endlose Abfahrt</div>
+    <h1>SKI<span>FAHREN</span></h1>
+    <p class="m-best" id="m-best"></p>
+    <button id="start" class="cta">Los geht's <small>Leertaste</small></button>
+    <div class="controls">
+      <div><b>← →</b> / <b>A D</b><span>Carven</span></div>
+      <div><b>↓</b> / <b>S</b><span>Ducken = schneller</span></div>
+      <div><b>Leertaste</b><span>Sprung</span></div>
+      <div><b>← →</b> in der Luft<span>Drehung</span></div>
+      <div><b>↑ ↓</b> in der Luft<span>Salto</span></div>
+      <div><b>Shift</b><span>Bremsen</span></div>
+    </div>
+    <p class="tip">Rampen anfahren, Tricks sauber landen, Hindernissen knapp ausweichen: Combo aufbauen, Highscore jagen.<br>Touch: linke / rechte Bildschirmhälfte lenkt.</p>
+  </div>
+</div>
+
+<div id="over" class="screen hidden">
+  <div class="panel">
+    <div class="eyebrow" id="o-reason">Gestürzt</div>
+    <div class="final" id="o-score">0</div>
+    <div id="o-new" class="newbest hidden">Neuer Bestwert!</div>
+    <div class="stats">
+      <div><span id="o-best">0</span><small>Bestwert</small></div>
+      <div><span id="o-dist">0 m</span><small>Distanz</small></div>
+      <div><span id="o-speed">0</span><small>Top-Tempo</small></div>
+      <div><span id="o-trick">0</span><small>Bester Trick</small></div>
+    </div>
+    <button id="retry" class="cta">Nochmal <small>Leertaste / R</small></button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module" src="src/game.js"></script>
+</body>
+</html>

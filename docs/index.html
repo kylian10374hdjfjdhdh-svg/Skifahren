@@ -1,0 +1,1520 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Skifahren</title>
+<style>
+:root {
+  --accent: #ff5a1f;
+  --ice: #6fd3ff;
+  --ink: #0b1220;
+  --glass: rgba(11, 18, 32, 0.55);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #cfe2f3; color: #fff;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  -webkit-user-select: none; user-select: none; touch-action: none; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.hidden { display: none !important; }
+
+#vignette { position: fixed; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0) 55%, rgba(210,235,255,0.55) 100%); }
+
+/* HUD */
+#hud { position: fixed; inset: 0; pointer-events: none; text-shadow: 0 2px 12px rgba(0,30,60,0.45); }
+.hud-left { position: absolute; left: 22px; bottom: 22px; }
+.speed { font-size: clamp(56px, 9vw, 104px); font-weight: 900; font-style: italic; line-height: 0.9; letter-spacing: -2px; }
+.speed small { font-size: 0.28em; font-weight: 700; margin-left: 8px; letter-spacing: 1px; opacity: 0.9; }
+.dist { margin-top: 6px; font-weight: 700; letter-spacing: 2px; opacity: 0.9; font-size: 18px; }
+.hud-right { position: absolute; right: 22px; top: 18px; text-align: right; }
+.score { font-size: clamp(34px, 5vw, 56px); font-weight: 900; font-style: italic; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.best { font-size: 14px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.85; }
+.combo { display: inline-block; margin-top: 10px; padding: 2px 16px 2px 12px; font-size: 34px; font-weight: 900; font-style: italic;
+  background: var(--accent); border-radius: 6px; transform: skewX(-8deg); text-shadow: none; box-shadow: 0 6px 24px rgba(255,90,31,0.5); }
+.bar { height: 5px; margin-top: 6px; background: rgba(255,255,255,0.35); border-radius: 3px; overflow: hidden; }
+#combobar { height: 100%; width: 100%; background: #fff; }
+.mute { position: absolute; left: 22px; top: 18px; font-size: 12px; letter-spacing: 1px; opacity: 0.7; }
+
+#popups { position: absolute; left: 0; right: 0; top: 30%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pop { font-size: clamp(22px, 4vw, 38px); font-weight: 900; font-style: italic; letter-spacing: 1px; white-space: nowrap;
+  animation: pop 1.5s ease-out forwards; }
+.pop.trick { color: #ffd23f; }
+.pop.air { color: var(--ice); }
+.pop.close { color: #fff; font-size: clamp(18px, 3vw, 28px); }
+.pop.bad { color: #ff7a7a; }
+@keyframes pop {
+  0% { transform: scale(0.5) translateY(14px); opacity: 0; }
+  12% { transform: scale(1.18) translateY(0); opacity: 1; }
+  25% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { transform: translateY(-40px) scale(1); opacity: 0; }
+}
+
+/* Screens */
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: radial-gradient(ellipse at center, rgba(8,20,40,0.25), rgba(8,20,40,0.6)); }
+.panel { width: min(560px, 100%); text-align: center; padding: 34px 30px 28px; border-radius: 22px;
+  background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 30px 80px rgba(0,10,30,0.45); }
+.eyebrow { font-size: 13px; letter-spacing: 4px; text-transform: uppercase; color: var(--ice); font-weight: 700; }
+h1 { font-size: clamp(54px, 11vw, 96px); font-weight: 900; font-style: italic; letter-spacing: -3px; line-height: 1; margin: 6px 0 4px; }
+h1 span { color: var(--accent); }
+.m-best { opacity: 0.85; margin-bottom: 20px; font-size: 15px; }
+.cta { cursor: pointer; border: 0; color: #fff; background: linear-gradient(180deg, #ff7a3f, var(--accent)); padding: 16px 44px;
+  font-size: 22px; font-weight: 900; font-style: italic; letter-spacing: 1px; border-radius: 12px; transform: skewX(-6deg);
+  box-shadow: 0 10px 30px rgba(255,90,31,0.5); transition: transform 0.12s, box-shadow 0.12s; font-family: inherit; }
+.cta:hover { transform: skewX(-6deg) translateY(-2px) scale(1.03); box-shadow: 0 14px 38px rgba(255,90,31,0.65); }
+.cta small { display: block; font-size: 11px; font-weight: 600; letter-spacing: 2px; opacity: 0.85; font-style: normal; }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin: 24px 0 14px; text-align: left; font-size: 13px; }
+.controls div { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+.controls b { font-size: 14px; color: #fff; }
+.controls span { opacity: 0.75; }
+.tip { font-size: 12.5px; opacity: 0.7; line-height: 1.5; }
+
+.final { font-size: clamp(60px, 12vw, 104px); font-weight: 900; font-style: italic; letter-spacing: -3px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.newbest { display: inline-block; margin: 2px 0 8px; padding: 4px 16px; background: #ffd23f; color: #3a2a00; font-weight: 900; font-style: italic;
+  border-radius: 6px; transform: skewX(-8deg); letter-spacing: 1px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 18px 0 24px; }
+.stats div { padding: 10px 4px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+.stats span { display: block; font-size: 18px; font-weight: 800; }
+.stats small { font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.7; }
+@media (max-width: 520px) { .stats { grid-template-columns: 1fr 1fr; } .controls { grid-template-columns: 1fr; } }
+
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vignette"></div>
+
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <div class="speed"><span id="speed">0</span><small>km/h</small></div>
+    <div class="dist" id="dist">0 m</div>
+  </div>
+  <div class="hud-right">
+    <div class="score" id="score">0</div>
+    <div class="best" id="best"></div>
+    <div id="combowrap" class="hidden"><div id="combo" class="combo">x1.0</div><div class="bar"><div id="combobar"></div></div></div>
+  </div>
+  <div id="popups"></div>
+  <div class="mute" id="mute">Ton an (M)</div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="eyebrow">Endlose Abfahrt</div>
+    <h1>SKI<span>FAHREN</span></h1>
+    <p class="m-best" id="m-best"></p>
+    <button id="start" class="cta">Los geht's <small>Leertaste</small></button>
+    <div class="controls">
+      <div><b>← →</b> / <b>A D</b><span>Carven</span></div>
+      <div><b>↓</b> / <b>S</b><span>Ducken = schneller</span></div>
+      <div><b>Leertaste</b><span>Sprung</span></div>
+      <div><b>← →</b> in der Luft<span>Drehung</span></div>
+      <div><b>↑ ↓</b> in der Luft<span>Salto</span></div>
+      <div><b>Shift</b><span>Bremsen</span></div>
+    </div>
+    <p class="tip">Rampen anfahren, Tricks sauber landen, Hindernissen knapp ausweichen: Combo aufbauen, Highscore jagen.<br>Touch: linke / rechte Bildschirmhälfte lenkt.</p>
+  </div>
+</div>
+
+<div id="over" class="screen hidden">
+  <div class="panel">
+    <div class="eyebrow" id="o-reason">Gestürzt</div>
+    <div class="final" id="o-score">0</div>
+    <div id="o-new" class="newbest hidden">Neuer Bestwert!</div>
+    <div class="stats">
+      <div><span id="o-best">0</span><small>Bestwert</small></div>
+      <div><span id="o-dist">0 m</span><small>Distanz</small></div>
+      <div><span id="o-speed">0</span><small>Top-Tempo</small></div>
+      <div><span id="o-trick">0</span><small>Bester Trick</small></div>
+    </div>
+    <button id="retry" class="cta">Nochmal <small>Leertaste / R</small></button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const THREE = window.THREE;
+// Reine Mathematik für das Gelände (ohne Three.js, damit testbar).
+// Koordinaten: Es geht in -Z bergab. +X ist rechts.
+
+const SLOPE = 0.3; // Höhenverlust pro Meter Strecke
+const PISTE_HALF = 22; // halbe Pistenbreite
+const CELL = 110; // Länge einer Sprungschanzen-Zelle
+const KICKER_LEN = 9;
+const KICKER_H = 2.1;
+
+function hash(n) {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+function smoothstep(a, b, x) {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+function centerX(z) {
+  return Math.sin(z * 0.008) * 38 + Math.sin(z * 0.019 + 1.3) * 16;
+}
+
+function noise(x, z) {
+  return (
+    Math.sin(x * 0.05 + z * 0.031) * 2.2 +
+    Math.sin(x * 0.11 - z * 0.07) * 1.0 +
+    Math.sin(x * 0.23 + z * 0.19) * 0.35
+  );
+}
+
+function kickerForCell(k) {
+  if (k < 1 || hash(k * 7.31) > 0.62) return null;
+  const z0 = -(k * CELL + 30 + hash(k * 3.7) * 50);
+  const x0 = centerX(z0) + (hash(k * 5.1) - 0.5) * 22;
+  return { z0, x0, w: 7 + hash(k * 9.9) * 3 };
+}
+
+function kickerHeight(x, z) {
+  const kc = Math.floor(-z / CELL);
+  let h = 0;
+  for (let k = kc - 1; k <= kc + 1; k++) {
+    const kk = kickerForCell(k);
+    if (!kk) continue;
+    const u = kk.z0 - z;
+    if (u < 0 || u > KICKER_LEN + 2.5) continue;
+    const wx = smoothstep(kk.w, kk.w * 0.45, Math.abs(x - kk.x0));
+    if (wx <= 0) continue;
+    const shape =
+      u <= KICKER_LEN
+        ? KICKER_H * Math.pow(u / KICKER_LEN, 1.6)
+        : KICKER_H * (1 - (u - KICKER_LEN) / 2.5);
+    h += shape * wx;
+  }
+  return h;
+}
+
+function heightAt(x, z) {
+  const d = Math.abs(x - centerX(z));
+  const off = smoothstep(PISTE_HALF, PISTE_HALF + 16, d);
+  const bank = Math.max(0, d - PISTE_HALF);
+  let h = SLOPE * z;
+  h += noise(x, z) * (0.12 + off * 1.3);
+  h += Math.min(60, bank * bank * 0.012);
+  h += kickerHeight(x, z);
+  return h;
+}
+
+function gradientAt(x, z, e = 0.4) {
+  return {
+    x: (heightAt(x + e, z) - heightAt(x - e, z)) / (2 * e),
+    z: (heightAt(x, z + e) - heightAt(x, z - e)) / (2 * e),
+  };
+}
+
+function normalAt(x, z) {
+  const g = gradientAt(x, z);
+  const l = Math.hypot(g.x, 1, g.z);
+  return { x: -g.x / l, y: 1 / l, z: -g.z / l };
+}
+
+// ---- Hindernisse (deterministisch pro Rasterzelle) ----
+const OB = 8; // Rasterweite
+
+function obstaclesInRange(zA, zB) {
+  // zA > zB (zA ist weiter oben am Berg)
+  const out = [];
+  const i0 = Math.floor(zB / OB);
+  const i1 = Math.floor(zA / OB);
+  for (let iz = i0; iz <= i1; iz++) {
+    const zc = iz * OB;
+    if (zc > -70) continue; // freie Startzone
+    const cx = centerX(zc);
+    const diff = Math.min(1, -zc / 3000); // wird schwerer
+    for (let ix = -16; ix <= 16; ix++) {
+      const id = iz * 1000 + ix;
+      const r = hash(id * 1.37);
+      const x = cx + ix * OB + (hash(id * 2.11) - 0.5) * (OB * 0.9);
+      const z = zc + (hash(id * 3.17) - 0.5) * (OB * 0.9);
+      const d = Math.abs(x - cx);
+      let type = null;
+      if (d > PISTE_HALF + 2) {
+        const dens = 0.2 + 0.2 * Math.min(1, (d - PISTE_HALF) / 40);
+        if (r < dens) type = 'tree';
+        else if (r > 0.97) type = 'rock';
+      } else if (d > 4) {
+        const p = 0.012 + 0.03 * diff;
+        if (r < p) type = 'rock';
+        else if (r > 1 - p * 0.7) type = 'tree';
+      }
+      if (!type) continue;
+      // nicht auf Schanzen
+      if (kickerHeight(x, z) > 0.01) continue;
+      const s = 0.8 + hash(id * 4.7) * (type === 'tree' ? 1.1 : 0.9);
+      out.push({ id, type, x, z, y: heightAt(x, z), s, r: (type === 'tree' ? 0.75 : 0.95) * s });
+    }
+  }
+  return out;
+}
+
+// Physik des Skifahrers – komplett ohne Rendering, damit sie testbar bleibt.
+
+const G = 24;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const TWO_PI = Math.PI * 2;
+
+class SkierSim {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.x = 0;
+    this.z = 0;
+    this.y = heightAt(0, 0);
+    this.vx = 0;
+    this.vz = -6;
+    this.vy = 0;
+    this.heading = 0;
+    this.grounded = true;
+    this.crashed = false;
+    this.crashTime = 0;
+    this.airTime = 0;
+    this.spin = 0; // gesamte Drehung in Luft (rad)
+    this.flip = 0;
+    this.carve = 0; // 0..1 Stärke des Carvings (für Partikel/Sound)
+    this.lean = 0; // geglättete Neigung für die Optik
+    this.events = []; // werden pro Frame vom Spiel abgeholt
+    this.maxSpeed = 0;
+  }
+
+  get speed() {
+    return Math.hypot(this.vx, this.vz);
+  }
+
+  update(dt, inp) {
+    if (this.crashed) {
+      this.crashTime += dt;
+      this.vx *= Math.exp(-2.2 * dt);
+      this.vz *= Math.exp(-2.2 * dt);
+      this.x += this.vx * dt;
+      this.z += this.vz * dt;
+      this.y = Math.max(this.y - 0, heightAt(this.x, this.z));
+      return;
+    }
+    if (this.grounded) this.stepGround(dt, inp);
+    else this.stepAir(dt, inp);
+    this.maxSpeed = Math.max(this.maxSpeed, this.speed);
+  }
+
+  stepGround(dt, inp) {
+    const sp = this.speed;
+    const turnRate = 2.6 - 1.5 * clamp(sp / 50, 0, 1);
+    this.heading = clamp(this.heading + inp.steer * turnRate * dt, -1.4, 1.4);
+
+    const g = gradientAt(this.x, this.z);
+    const k = G / (1 + g.x * g.x + g.z * g.z);
+    this.vx += -g.x * k * dt;
+    this.vz += -g.z * k * dt;
+
+    const fx = Math.sin(this.heading);
+    const fz = -Math.cos(this.heading);
+    const lx = Math.cos(this.heading);
+    const lz = Math.sin(this.heading);
+    let vLat = this.vx * lx + this.vz * lz;
+    let vFwd = this.vx * fx + this.vz * fz;
+
+    const grip = inp.brake ? 3.2 : 5.5;
+    const lost = vLat * (1 - Math.exp(-grip * dt));
+    vLat -= lost;
+    // Carven kostet etwas Tempo
+    vFwd -= Math.abs(lost) * 0.18;
+
+    const drag = inp.tuck ? 0.0028 : 0.0072;
+    vFwd -= (drag * vFwd * Math.abs(vFwd) + 0.03 * vFwd) * dt;
+    if (inp.brake && vFwd > 0) vFwd -= 14 * dt;
+    if (vFwd < 0) vFwd = Math.max(vFwd, -2);
+
+    this.vx = fx * vFwd + lx * vLat;
+    this.vz = fz * vFwd + lz * vLat;
+    this.carve = clamp(Math.abs(lost) / (Math.abs(lost) + 4) * 2.2 + (inp.brake ? 0.3 : 0), 0, 1) * clamp(sp / 8, 0, 1);
+
+    const nx = this.x + this.vx * dt;
+    const nz = this.z + this.vz * dt;
+    const gNew = heightAt(nx, nz);
+    const vyBall = this.vy - G * dt;
+    const yBall = this.y + vyBall * dt;
+    if (inp.jump && inp.jumpPressed) {
+      this.vy = Math.max(this.vy, 0) + 9;
+      this.takeOff(nx, nz, true);
+      return;
+    }
+    if (gNew < yBall - 0.03) {
+      this.vy = vyBall;
+      this.takeOff(nx, nz, false);
+      return;
+    }
+    this.vy = (gNew - this.y) / dt;
+    this.x = nx;
+    this.z = nz;
+    this.y = gNew;
+  }
+
+  takeOff(nx, nz, ollie) {
+    this.grounded = false;
+    this.airTime = 0;
+    this.spin = 0;
+    this.flip = 0;
+    this.x = nx;
+    this.z = nz;
+    this.y += this.vy * (1 / 60);
+    this.events.push({ type: 'takeoff', ollie });
+  }
+
+  stepAir(dt, inp) {
+    this.airTime += dt;
+    this.spin += inp.steer * 7.0 * dt;
+    this.flip += (inp.flipAxis || 0) * 6.0 * dt;
+    this.vx *= 1 - 0.01 * dt;
+    this.vz *= 1 - 0.01 * dt;
+    this.vy -= G * dt;
+    this.x += this.vx * dt;
+    this.z += this.vz * dt;
+    this.y += this.vy * dt;
+    const gy = heightAt(this.x, this.z);
+    if (this.y <= gy) this.land(gy);
+  }
+
+  land(gy) {
+    const n = normalAt(this.x, this.z);
+    const impact = -(this.vx * n.x + this.vy * n.y + this.vz * n.z);
+    const a = Math.abs(this.spin) % Math.PI;
+    const spinErr = Math.min(a, Math.PI - a);
+    const f = Math.abs(this.flip) % TWO_PI;
+    const flipErr = Math.min(f, TWO_PI - f);
+    this.y = gy;
+    const spins = Math.round(Math.abs(this.spin) / Math.PI); // 180°-Schritte
+    const flips = Math.round(Math.abs(this.flip) / TWO_PI);
+    const bad = spinErr > 0.85 || flipErr > 0.85 || impact > 30;
+    if (bad && this.airTime > 0.15) {
+      this.events.push({ type: 'bail', airTime: this.airTime });
+      this.crash('Bruchlandung');
+      return;
+    }
+    this.grounded = true;
+    // Geschwindigkeit an Hang anpassen, Heading neu ausrichten
+    const sp = this.speed;
+    this.heading = clamp(Math.atan2(this.vx, -this.vz), -1.4, 1.4);
+    this.vy = 0;
+    this.vx *= 0.97;
+    this.vz *= 0.97;
+    if (sp < 1) this.heading = 0;
+    this.events.push({
+      type: 'land',
+      airTime: this.airTime,
+      spins,
+      flips,
+      clean: spinErr < 0.45 && flipErr < 0.45,
+      impact,
+    });
+    this.spin = 0;
+    this.flip = 0;
+  }
+
+  crash(reason) {
+    if (this.crashed) return;
+    this.crashed = true;
+    this.crashTime = 0;
+    this.reason = reason;
+    this.events.push({ type: 'crash', reason });
+  }
+
+  drainEvents() {
+    const e = this.events;
+    this.events = [];
+    return e;
+  }
+}
+
+// Prozeduraler Sound (Web Audio) – keine Dateien nötig.
+class GameAudio {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  init() {
+    if (this.ctx) return this.resume();
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+    } catch (e) {
+      return;
+    }
+    const ctx = this.ctx;
+    const len = ctx.sampleRate * 2;
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    this.noise = buf;
+    this.master = ctx.createGain();
+    this.master.gain.value = 0.8;
+    this.master.connect(ctx.destination);
+
+    const loop = (type, freq, q) => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      src.connect(f);
+      f.connect(g);
+      g.connect(this.master);
+      src.start();
+      return { f, g };
+    };
+    this.wind = loop('bandpass', 500, 0.6);
+    this.carve = loop('bandpass', 2600, 1.1);
+  }
+
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.master) this.master.gain.value = this.muted ? 0 : 0.8;
+    return this.muted;
+  }
+
+  update(speed, carve, grounded, active) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const s = Math.min(1, speed / 60);
+    this.wind.g.gain.setTargetAtTime(active ? 0.05 + s * 0.4 : 0, t, 0.12);
+    this.wind.f.frequency.setTargetAtTime(350 + s * 1700, t, 0.12);
+    this.carve.g.gain.setTargetAtTime(active && grounded ? carve * s * 0.35 : 0, t, 0.06);
+    this.carve.f.frequency.setTargetAtTime(2000 + s * 2500, t, 0.1);
+  }
+
+  burst(freq, dur, gain, type = 'lowpass') {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    src.connect(f);
+    f.connect(g);
+    g.connect(this.master);
+    src.start(0, Math.random());
+    src.stop(ctx.currentTime + dur + 0.05);
+  }
+
+  tone(freq, dur, gain, type = 'sine', slide = 0) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, ctx.currentTime + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.connect(g);
+    g.connect(this.master);
+    o.start();
+    o.stop(ctx.currentTime + dur + 0.05);
+  }
+
+  land(power) {
+    this.burst(500 + power * 40, 0.25, Math.min(0.9, 0.2 + power * 0.04));
+  }
+  jump() {
+    this.burst(1800, 0.12, 0.15, 'highpass');
+  }
+  crash() {
+    this.burst(260, 0.7, 0.9);
+    this.tone(120, 0.5, 0.35, 'sawtooth', 0.4);
+  }
+  trick(level) {
+    const base = 520 + level * 90;
+    this.tone(base, 0.18, 0.18, 'triangle');
+    setTimeout(() => this.tone(base * 1.5, 0.28, 0.18, 'triangle'), 90);
+  }
+  close() {
+    this.tone(900, 0.12, 0.12, 'square', 1.6);
+  }
+  start() {
+    this.tone(330, 0.15, 0.2, 'triangle');
+    setTimeout(() => this.tone(660, 0.25, 0.2, 'triangle'), 110);
+  }
+}
+
+// Partikel: Schneespray und Schneefall.
+
+class Spray {
+  constructor(scene, max = 900) {
+    this.max = max;
+    this.pos = new Float32Array(max * 3);
+    this.vel = new Float32Array(max * 3);
+    this.life = new Float32Array(max);
+    this.next = 0;
+    for (let i = 0; i < max; i++) this.pos[i * 3 + 1] = -9999;
+    const geo = new THREE.BufferGeometry();
+    this.attr = new THREE.BufferAttribute(this.pos, 3);
+    this.attr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('position', this.attr);
+    const mat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.45,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    this.points = new THREE.Points(geo, mat);
+    this.points.frustumCulled = false;
+    scene.add(this.points);
+  }
+
+  emit(x, y, z, vx, vy, vz, spread, n) {
+    for (let k = 0; k < n; k++) {
+      const i = this.next;
+      this.next = (this.next + 1) % this.max;
+      const p = i * 3;
+      this.pos[p] = x + (Math.random() - 0.5) * 0.4;
+      this.pos[p + 1] = y + Math.random() * 0.2;
+      this.pos[p + 2] = z + (Math.random() - 0.5) * 0.4;
+      this.vel[p] = vx + (Math.random() - 0.5) * spread;
+      this.vel[p + 1] = vy + Math.random() * spread * 0.8;
+      this.vel[p + 2] = vz + (Math.random() - 0.5) * spread;
+      this.life[i] = 0.5 + Math.random() * 0.6;
+    }
+  }
+
+  update(dt) {
+    for (let i = 0; i < this.max; i++) {
+      if (this.life[i] <= 0) continue;
+      this.life[i] -= dt;
+      const p = i * 3;
+      if (this.life[i] <= 0) {
+        this.pos[p + 1] = -9999;
+        continue;
+      }
+      this.vel[p + 1] -= 10 * dt;
+      const drag = Math.exp(-1.5 * dt);
+      this.vel[p] *= drag;
+      this.vel[p + 2] *= drag;
+      this.pos[p] += this.vel[p] * dt;
+      this.pos[p + 1] += this.vel[p + 1] * dt;
+      this.pos[p + 2] += this.vel[p + 2] * dt;
+    }
+    this.attr.needsUpdate = true;
+  }
+}
+
+class Snowfall {
+  constructor(scene, n = 1400) {
+    this.n = n;
+    this.pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      this.pos[i * 3] = (Math.random() - 0.5) * 80;
+      this.pos[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      this.pos[i * 3 + 2] = (Math.random() - 0.5) * 80;
+    }
+    this.rel = new Float32Array(this.pos);
+    const geo = new THREE.BufferGeometry();
+    this.attr = new THREE.BufferAttribute(this.pos, 3);
+    this.attr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('position', this.attr);
+    const mat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.16,
+      transparent: true,
+      opacity: 0.8,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    this.points = new THREE.Points(geo, mat);
+    this.points.frustumCulled = false;
+    scene.add(this.points);
+  }
+
+  update(dt, cam, time) {
+    const r = this.rel;
+    for (let i = 0; i < this.n; i++) {
+      const p = i * 3;
+      r[p + 1] -= (2.2 + (i % 5) * 0.4) * dt;
+      r[p] += Math.sin(time * 0.7 + i) * 0.4 * dt;
+      if (r[p + 1] < -20) r[p + 1] += 40;
+      this.pos[p] = cam.x + r[p];
+      this.pos[p + 1] = cam.y + r[p + 1];
+      this.pos[p + 2] = cam.z + r[p + 2];
+    }
+    this.attr.needsUpdate = true;
+  }
+}
+
+// Low-Poly-Skifahrer aus einfachen Formen.
+
+const col = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+const mat = (hex, rough = 0.6, metal = 0) =>
+  new THREE.MeshStandardMaterial({ color: col(hex), roughness: rough, metalness: metal });
+
+function box(w, h, d, m, x = 0, y = 0, z = 0) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  return mesh;
+}
+
+function createSkier() {
+  const root = new THREE.Group();
+  const rig = new THREE.Group();
+  root.add(rig);
+
+  const jacket = mat(0xe8381f, 0.55);
+  const pants = mat(0x1c2433, 0.7);
+  const helmetM = mat(0xf5f7fa, 0.3);
+  const goggleM = mat(0x0b1220, 0.1, 0.6);
+  const skiM = mat(0x1b1f2a, 0.35, 0.2);
+  const accent = mat(0xffb020, 0.5);
+  const glove = mat(0x222831, 0.8);
+
+  // Skier
+  for (const s of [-0.2, 0.2]) {
+    rig.add(box(0.13, 0.05, 2.0, skiM, s, 0.03, 0));
+    const tip = box(0.13, 0.05, 0.4, skiM, s, 0.09, -1.12);
+    tip.rotation.x = 0.35;
+    rig.add(tip);
+    rig.add(box(0.05, 0.012, 1.3, accent, s, 0.062, 0.1));
+  }
+
+  const hips = new THREE.Group();
+  hips.position.set(0, 0.1, 0);
+  rig.add(hips);
+
+  const legL = box(0.17, 0.6, 0.2, pants, -0.2, 0.32, 0);
+  const legR = box(0.17, 0.6, 0.2, pants, 0.2, 0.32, 0);
+  hips.add(legL, legR);
+
+  const torsoPivot = new THREE.Group();
+  torsoPivot.position.set(0, 0.62, 0);
+  hips.add(torsoPivot);
+  torsoPivot.add(box(0.52, 0.62, 0.32, jacket, 0, 0.31, 0));
+  torsoPivot.add(box(0.54, 0.1, 0.34, accent, 0, 0.08, 0));
+
+  const head = new THREE.Group();
+  head.position.set(0, 0.8, -0.02);
+  torsoPivot.add(head);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.19, 14, 12), helmetM);
+  skull.castShadow = true;
+  head.add(skull);
+  head.add(box(0.31, 0.11, 0.1, goggleM, 0, 0.0, -0.15));
+
+  const arms = [];
+  for (const s of [-1, 1]) {
+    const arm = new THREE.Group();
+    arm.position.set(0.31 * s, 0.55, 0);
+    torsoPivot.add(arm);
+    arm.add(box(0.12, 0.5, 0.13, jacket, 0, -0.22, 0));
+    arm.add(box(0.13, 0.13, 0.14, glove, 0, -0.5, 0));
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 1.35, 5),
+      mat(0x9aa4b2, 0.3, 0.6)
+    );
+    pole.position.set(0, -0.7, 0.45);
+    pole.rotation.x = -0.6;
+    pole.castShadow = true;
+    arm.add(pole);
+    arms.push(arm);
+  }
+
+  return { root, rig, hips, torsoPivot, head, arms, legs: [legL, legR], tuck: 0 };
+}
+
+// Endlose Welt: Gelände wird in Chunks vor dem Skifahrer erzeugt und hinten entfernt.
+
+
+const CS = 96; // Chunk-Länge
+const STEP = 2;
+const XMIN = -216;
+const XMAX = 216;
+const NX = (XMAX - XMIN) / STEP;
+const NZ = CS / STEP;
+const lin = (v) => Math.pow(v, 2.2);
+const mix = (a, b, t) => a + (b - a) * t;
+
+// ---------- geteilte Geometrien ----------
+function mergeGeos(list) {
+  let vc = 0;
+  let ic = 0;
+  for (const g of list) {
+    vc += g.attributes.position.count;
+    ic += g.index.count;
+  }
+  const pos = new Float32Array(vc * 3);
+  const nor = new Float32Array(vc * 3);
+  const colr = new Float32Array(vc * 3);
+  const idx = new Uint16Array(ic);
+  let vo = 0;
+  let io = 0;
+  for (const g of list) {
+    pos.set(g.attributes.position.array, vo * 3);
+    nor.set(g.attributes.normal.array, vo * 3);
+    colr.set(g.attributes.color.array, vo * 3);
+    const gi = g.index.array;
+    for (let i = 0; i < gi.length; i++) idx[io + i] = gi[i] + vo;
+    vo += g.attributes.position.count;
+    io += gi.length;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  out.setAttribute('color', new THREE.BufferAttribute(colr, 3));
+  out.setIndex(new THREE.BufferAttribute(idx, 1));
+  return out;
+}
+
+function paint(g, fn) {
+  const p = g.attributes.position;
+  const c = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    const [r, gg, b] = fn(p.getY(i), p.getX(i), p.getZ(i));
+    c[i * 3] = lin(r);
+    c[i * 3 + 1] = lin(gg);
+    c[i * 3 + 2] = lin(b);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g;
+}
+
+function cone(r, h, baseY) {
+  const g = new THREE.ConeGeometry(r, h, 8);
+  g.translate(0, baseY + h / 2, 0);
+  return paint(g, (y) => {
+    const t = (y - baseY) / h;
+    const snow = smoothstep(0.35, 0.85, t) * 0.75;
+    const dark = [0.07, 0.27, 0.19];
+    const lite = [0.9, 0.95, 1.0];
+    return [mix(dark[0], lite[0], snow), mix(dark[1], lite[1], snow), mix(dark[2], lite[2], snow)];
+  });
+}
+
+function makeTreeGeo() {
+  const trunk = new THREE.CylinderGeometry(0.22, 0.32, 1.3, 6);
+  trunk.translate(0, 0.65, 0);
+  paint(trunk, () => [0.33, 0.21, 0.12]);
+  return mergeGeos([trunk, cone(2.1, 3.0, 1.0), cone(1.6, 2.6, 2.7), cone(1.1, 2.2, 4.3)]);
+}
+
+function makeRockGeo() {
+  const g = new THREE.IcosahedronGeometry(1, 0);
+  g.translate(0, 0.35, 0);
+  // Icosahedron ist nicht indiziert → Indizes ergänzen
+  const n = g.attributes.position.count;
+  const idx = [];
+  for (let i = 0; i < n; i++) idx.push(i);
+  g.setIndex(idx);
+  return paint(g, (y) => {
+    const t = Math.min(1, Math.max(0, (y + 0.7) / 2));
+    return [mix(0.36, 0.6, t), mix(0.38, 0.62, t), mix(0.43, 0.68, t)];
+  });
+}
+
+function makePoleGeo() {
+  const g = new THREE.CylinderGeometry(0.07, 0.07, 2.6, 5);
+  g.translate(0, 1.3, 0);
+  return paint(g, (y) => (y > 2.0 ? [0.1, 0.1, 0.12] : [1.0, 0.36, 0.1]));
+}
+
+class World {
+  constructor(scene) {
+    this.scene = scene;
+    this.chunks = new Map();
+    this.treeGeo = makeTreeGeo();
+    this.rockGeo = makeRockGeo();
+    this.poleGeo = makePoleGeo();
+    this.vcMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
+    this.rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    this.dummy = new THREE.Object3D();
+  }
+
+  reset() {
+    for (const c of this.chunks.values()) this.disposeChunk(c);
+    this.chunks.clear();
+  }
+
+  // Sorgt dafür, dass um z herum Chunks existieren. Gibt true zurück, wenn gebaut wurde.
+  update(z, budget = 1) {
+    const c = Math.max(0, Math.floor(-z / CS));
+    let built = 0;
+    for (let k = c - 1; k <= c + 4; k++) {
+      if (k < 0 || this.chunks.has(k)) continue;
+      if (built >= budget) break;
+      this.chunks.set(k, this.buildChunk(k));
+      built++;
+    }
+    for (const [k, ch] of this.chunks) {
+      if (k < c - 2) {
+        this.disposeChunk(ch);
+        this.chunks.delete(k);
+      }
+    }
+    return built > 0;
+  }
+
+  disposeChunk(ch) {
+    this.scene.remove(ch.group);
+    ch.mesh.geometry.dispose();
+  }
+
+  obstaclesNear(z) {
+    const c = Math.max(0, Math.floor(-z / CS));
+    const out = [];
+    for (let k = c - 1; k <= c + 1; k++) {
+      const ch = this.chunks.get(k);
+      if (ch) for (const o of ch.obstacles) out.push(o);
+    }
+    return out;
+  }
+
+  buildChunk(c) {
+    const z0 = -c * CS;
+    const nx1 = NX + 1;
+    const nz1 = NZ + 1;
+    const W = nx1 + 2;
+    const H = nz1 + 2;
+    const hs = new Float32Array(W * H);
+    for (let j = 0; j < H; j++) {
+      const z = z0 - (j - 1) * STEP;
+      for (let i = 0; i < W; i++) hs[j * W + i] = heightAt(XMIN + (i - 1) * STEP, z);
+    }
+    const pos = new Float32Array(nx1 * nz1 * 3);
+    const nor = new Float32Array(nx1 * nz1 * 3);
+    const colr = new Float32Array(nx1 * nz1 * 3);
+    for (let j = 0; j < nz1; j++) {
+      const z = z0 - j * STEP;
+      const cx = centerX(z);
+      for (let i = 0; i < nx1; i++) {
+        const x = XMIN + i * STEP;
+        const k = j * nx1 + i;
+        const h = hs[(j + 1) * W + i + 1];
+        pos[k * 3] = x;
+        pos[k * 3 + 1] = h;
+        pos[k * 3 + 2] = z;
+        const dx = (hs[(j + 1) * W + i + 2] - hs[(j + 1) * W + i]) / (2 * STEP);
+        const dz = (hs[j * W + i + 1] - hs[(j + 2) * W + i + 1]) / (2 * STEP);
+        const l = Math.hypot(dx, 1, dz);
+        const ny = 1 / l;
+        nor[k * 3] = -dx / l;
+        nor[k * 3 + 1] = ny;
+        nor[k * 3 + 2] = -dz / l;
+
+        const d = Math.abs(x - cx);
+        const piste = 1 - smoothstep(PISTE_HALF - 2, PISTE_HALF + 5, d);
+        const groove = 0.025 * Math.sin(x * 0.9 + z * 0.04) + 0.015 * Math.sin(x * 2.3 - z * 0.3);
+        let r = mix(0.84, 0.95, piste) + groove;
+        let g = mix(0.89, 0.97, piste) + groove;
+        let b = mix(0.97, 1.0, piste);
+        const rock = smoothstep(0.82, 0.6, ny);
+        r = mix(r, 0.4, rock);
+        g = mix(g, 0.42, rock);
+        b = mix(b, 0.48, rock);
+        if (kickerHeight(x, z) > 0.03) {
+          r = mix(r, 0.72, 0.6);
+          g = mix(g, 0.86, 0.6);
+          b = mix(b, 1.0, 0.6);
+        }
+        colr[k * 3] = lin(r);
+        colr[k * 3 + 1] = lin(g);
+        colr[k * 3 + 2] = lin(b);
+      }
+    }
+    const idx = [];
+    for (let j = 0; j < NZ; j++) {
+      for (let i = 0; i < NX; i++) {
+        const a = j * nx1 + i;
+        const b = a + 1;
+        const cc = a + nx1;
+        const d = cc + 1;
+        idx.push(a, cc, b, b, cc, d);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colr, 3));
+    geo.setIndex(idx);
+    geo.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geo, this.vcMat);
+    mesh.receiveShadow = true;
+
+    const group = new THREE.Group();
+    group.add(mesh);
+
+    const obstacles = obstaclesInRange(z0, z0 - CS + 0.001);
+    const trees = obstacles.filter((o) => o.type === 'tree');
+    const rocks = obstacles.filter((o) => o.type === 'rock');
+    const d = this.dummy;
+
+    if (trees.length) {
+      const im = new THREE.InstancedMesh(this.treeGeo, this.vcMat, trees.length);
+      trees.forEach((o, i) => {
+        d.position.set(o.x, o.y - 0.15, o.z);
+        d.rotation.set(0, o.id * 0.7, 0);
+        d.scale.set(o.s, o.s * (0.9 + (o.id % 7) * 0.04), o.s);
+        d.updateMatrix();
+        im.setMatrixAt(i, d.matrix);
+      });
+      im.castShadow = true;
+      im.receiveShadow = true;
+      im.frustumCulled = false;
+      group.add(im);
+    }
+    if (rocks.length) {
+      const im = new THREE.InstancedMesh(this.rockGeo, this.rockMat, rocks.length);
+      rocks.forEach((o, i) => {
+        d.position.set(o.x, o.y - 0.1, o.z);
+        d.rotation.set(o.id * 0.31, o.id * 1.3, o.id * 0.17);
+        d.scale.set(o.s * 1.3, o.s * 0.85, o.s);
+        d.updateMatrix();
+        im.setMatrixAt(i, d.matrix);
+      });
+      im.castShadow = true;
+      im.receiveShadow = true;
+      im.frustumCulled = false;
+      group.add(im);
+    }
+
+    // Pistenmarkierung (Stangen links/rechts)
+    const poles = [];
+    for (let z = z0 - 9; z > z0 - CS; z -= 18) {
+      const cx = centerX(z);
+      poles.push([cx - (PISTE_HALF - 0.5), z], [cx + (PISTE_HALF - 0.5), z]);
+    }
+    const pm = new THREE.InstancedMesh(this.poleGeo, this.vcMat, poles.length);
+    poles.forEach(([x, z], i) => {
+      d.position.set(x, heightAt(x, z), z);
+      d.rotation.set(0, 0, 0);
+      d.scale.set(1, 1, 1);
+      d.updateMatrix();
+      pm.setMatrixAt(i, d.matrix);
+    });
+    pm.castShadow = true;
+    pm.frustumCulled = false;
+    group.add(pm);
+
+    this.scene.add(group);
+    return { group, mesh, obstacles };
+  }
+}
+
+
+
+
+
+
+
+
+const $ = (id) => document.getElementById(id);
+const lerp = (a, b, t) => a + (b - a) * t;
+const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
+const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
+
+// ---------- Renderer / Szene ----------
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const HORIZON = new THREE.Color(0xcfe2f3).convertSRGBToLinear();
+scene.fog = new THREE.FogExp2(HORIZON, 0.0032);
+
+// Himmel: vertikaler Verlauf
+{
+  const c = document.createElement('canvas');
+  c.width = 4;
+  c.height = 256;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#2f6fc0');
+  grad.addColorStop(0.45, '#7fb4e6');
+  grad.addColorStop(0.8, '#cfe2f3');
+  grad.addColorStop(1, '#e8f1fa');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 4, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding;
+  scene.background = tex;
+}
+
+const camera = new THREE.PerspectiveCamera(64, 1, 0.1, 3500);
+
+const hemi = new THREE.HemisphereLight(0xcfe6ff, 0xdfe8f5, 0.75);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+const sc = sun.shadow.camera;
+sc.left = -60;
+sc.right = 60;
+sc.top = 60;
+sc.bottom = -60;
+sc.near = 10;
+sc.far = 320;
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.6;
+scene.add(sun, sun.target);
+
+// Berge am Horizont (folgen der Kamera)
+const mountains = new THREE.Group();
+{
+  const mat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
+  for (let i = 0; i < 26; i++) {
+    const a = (i / 26) * Math.PI * 2 + Math.sin(i * 12.9) * 0.15;
+    const h = 260 + ((Math.sin(i * 78.2) + 1) / 2) * 420;
+    const r = 220 + ((Math.sin(i * 41.7) + 1) / 2) * 260;
+    const geo = new THREE.ConeGeometry(r, h, 6 + (i % 3), 1);
+    const p = geo.attributes.position;
+    const cols = new Float32Array(p.count * 3);
+    for (let v = 0; v < p.count; v++) {
+      const t = (p.getY(v) + h / 2) / h;
+      const snow = Math.min(1, Math.max(0, (t - 0.45) / 0.25));
+      const rock = [0.36, 0.45, 0.62];
+      const wht = [0.95, 0.97, 1.0];
+      for (let k = 0; k < 3; k++) cols[v * 3 + k] = Math.pow(lerp(rock[k], wht[k], snow), 2.2);
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+    const m = new THREE.Mesh(geo, mat);
+    const dist = 1500 + (i % 4) * 160;
+    m.position.set(Math.sin(a) * dist, h / 2 - 260, Math.cos(a) * dist);
+    mountains.add(m);
+  }
+  scene.add(mountains);
+}
+
+const world = new World(scene);
+const spray = new Spray(scene);
+const snowfall = new Snowfall(scene);
+const skier = createSkier();
+scene.add(skier.root);
+const audio = new GameAudio();
+const sim = new SkierSim();
+
+// ---------- Eingabe ----------
+const keys = new Set();
+let jumpEdge = false;
+let startEdge = false;
+window.addEventListener('keydown', (e) => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+  if (!keys.has(e.code)) {
+    if (e.code === 'Space') jumpEdge = true;
+    if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR') startEdge = true;
+    if (e.code === 'KeyM') {
+      const m = audio.toggleMute();
+      $('mute').textContent = m ? 'Ton aus (M)' : 'Ton an (M)';
+    }
+  }
+  keys.add(e.code);
+  audio.init();
+});
+window.addEventListener('keyup', (e) => keys.delete(e.code));
+window.addEventListener('blur', () => keys.clear());
+
+// Touch: linke/rechte Bildschirmhälfte lenken, zwei Finger = Sprung, Wischen runter = ducken
+const touch = { left: false, right: false, tuck: false };
+function readTouches(ev) {
+  const w = window.innerWidth;
+  touch.left = touch.right = false;
+  for (const t of ev.touches) {
+    if (t.clientX < w / 2) touch.left = true;
+    else touch.right = true;
+  }
+  touch.tuck = ev.touches.length >= 2 && touch.left && touch.right;
+}
+window.addEventListener('touchstart', (e) => {
+  audio.init();
+  if (state !== 'playing') startEdge = true;
+  readTouches(e);
+}, { passive: true });
+window.addEventListener('touchmove', readTouches, { passive: true });
+window.addEventListener('touchend', readTouches, { passive: true });
+$('start').addEventListener('click', () => {
+  audio.init();
+  startEdge = true;
+});
+$('retry').addEventListener('click', () => {
+  startEdge = true;
+});
+
+function readInput() {
+  const left = keys.has('ArrowLeft') || keys.has('KeyA') || touch.left;
+  const right = keys.has('ArrowRight') || keys.has('KeyD') || touch.right;
+  const up = keys.has('ArrowUp') || keys.has('KeyW');
+  const down = keys.has('ArrowDown') || keys.has('KeyS');
+  return {
+    steer: (right ? 1 : 0) - (left ? 1 : 0),
+    tuck: down || touch.tuck,
+    brake: keys.has('ShiftLeft') || keys.has('ShiftRight'),
+    jump: keys.has('Space'),
+    jumpPressed: jumpEdge,
+    flipAxis: (up ? 1 : 0) - (down ? 1 : 0),
+  };
+}
+
+// ---------- Spielzustand ----------
+let state = 'menu'; // menu | playing | over
+let score = 0;
+let trickScore = 0;
+let streak = 0;
+let comboT = 0;
+let best = 0;
+try {
+  best = parseInt(localStorage.getItem('skifahren.best') || '0', 10) || 0;
+} catch (e) {
+  best = 0;
+}
+let overTimer = 0;
+let shake = 0;
+let time = 0;
+let camYaw = 0;
+let camPos = new THREE.Vector3(0, 10, 12);
+let fov = 64;
+let bestTrick = 0;
+let closeCalls = 0;
+
+const mult = () => Math.min(8, 1 + 0.5 * streak);
+
+function popup(text, cls = '') {
+  const el = document.createElement('div');
+  el.className = 'pop ' + cls;
+  el.textContent = text;
+  $('popups').appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+
+function award(points, label, cls) {
+  const p = Math.round(points * mult());
+  trickScore += p;
+  bestTrick = Math.max(bestTrick, p);
+  popup(`${label}  +${p}`, cls);
+}
+
+function startRun() {
+  sim.reset();
+  world.reset();
+  world.update(0, 99);
+  score = 0;
+  trickScore = 0;
+  streak = 0;
+  comboT = 0;
+  bestTrick = 0;
+  closeCalls = 0;
+  overTimer = 0;
+  camYaw = 0;
+  state = 'playing';
+  $('menu').classList.add('hidden');
+  $('over').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  audio.start();
+}
+
+function endRun() {
+  state = 'over';
+  const total = Math.round(score);
+  const isBest = total > best;
+  if (isBest) {
+    best = total;
+    try {
+      localStorage.setItem('skifahren.best', String(best));
+    } catch (e) {}
+  }
+  $('o-reason').textContent = sim.reason || 'Gestürzt';
+  $('o-score').textContent = total.toLocaleString('de-CH');
+  $('o-new').classList.toggle('hidden', !isBest);
+  $('o-best').textContent = best.toLocaleString('de-CH');
+  $('o-dist').textContent = Math.round(-sim.z) + ' m';
+  $('o-speed').textContent = Math.round(sim.maxSpeed * 3.6) + ' km/h';
+  $('o-trick').textContent = bestTrick.toLocaleString('de-CH');
+  $('over').classList.remove('hidden');
+}
+
+// ---------- Events der Physik ----------
+function handleEvents() {
+  for (const e of sim.drainEvents()) {
+    if (e.type === 'takeoff') {
+      if (e.ollie) audio.jump();
+    } else if (e.type === 'land') {
+      const big = e.airTime > 0.45 || e.spins > 0 || e.flips > 0;
+      if (e.impact > 6) audio.land(e.impact);
+      spray.emit(sim.x, sim.y + 0.2, sim.z, 0, 3, 0, 7, Math.min(60, 8 + e.impact * 3));
+      shake = Math.max(shake, Math.min(0.5, e.impact * 0.02));
+      if (big && e.clean) {
+        const pts = e.airTime * 60 + e.spins * 150 + e.flips * 350;
+        const parts = [];
+        if (e.flips) parts.push(e.flips > 1 ? `${e.flips}x FLIP` : 'FLIP');
+        if (e.spins) parts.push(`${e.spins * 180}°`);
+        if (!parts.length) parts.push(`AIR ${e.airTime.toFixed(1)}s`);
+        streak++;
+        comboT = 5;
+        award(pts, parts.join(' + '), e.spins + e.flips > 0 ? 'trick' : 'air');
+        audio.trick(Math.min(6, e.spins + e.flips * 2));
+      } else if (big && !e.clean) {
+        popup('WACKELIG', 'bad');
+      }
+    } else if (e.type === 'crash') {
+      streak = 0;
+      comboT = 0;
+      audio.crash();
+      shake = 1;
+      spray.emit(sim.x, sim.y + 0.5, sim.z, sim.vx * 0.3, 5, sim.vz * 0.3, 10, 120);
+    }
+  }
+}
+
+// ---------- Hindernisse ----------
+function checkObstacles() {
+  const list = world.obstaclesNear(sim.z);
+  for (const o of list) {
+    const dx = sim.x - o.x;
+    const dz = sim.z - o.z;
+    if (Math.abs(dx) > 5 || Math.abs(dz) > 5) continue;
+    const dist = Math.hypot(dx, dz);
+    const top = o.type === 'tree' ? 7 * o.s : 1.1 * o.s;
+    const above = sim.y - o.y;
+    if (dist < o.r + 0.4 && above < top) {
+      sim.crash(o.type === 'tree' ? 'Baum erwischt' : 'Felsen erwischt');
+      return;
+    }
+    if (!o.counted && dist < o.r + 1.8 && above < top && sim.speed > 14) {
+      o.counted = true;
+      closeCalls++;
+      streak++;
+      comboT = 5;
+      award(40 + sim.speed, 'KNAPP', 'close');
+      audio.close();
+    }
+  }
+}
+
+// ---------- Skifahrer-Pose ----------
+function poseSkier(dt, inp) {
+  const m = skier;
+  m.root.position.set(sim.x, sim.y, sim.z);
+  const fx = Math.sin(sim.heading);
+  const fz = -Math.cos(sim.heading);
+  const g = gradientAt(sim.x, sim.z);
+  const slope = Math.atan(g.x * fx + g.z * fz);
+  const lean = damp(sim.lean, -inp.steer * clampN(sim.speed / 30, 0.2, 1) * 0.5, 9, dt);
+  sim.lean = lean;
+  const rig = m.rig;
+  rig.rotation.order = 'YXZ';
+  if (sim.crashed) {
+    const a = Math.min(sim.crashTime * 9, Math.PI * 2 + 1.4);
+    rig.rotation.set(-a, -sim.heading, Math.sin(sim.crashTime * 7) * 0.4 * Math.exp(-sim.crashTime));
+    rig.position.y = 0.25 * Math.min(1, sim.crashTime * 3);
+  } else {
+    rig.position.y = 0;
+    if (sim.grounded) {
+      rig.rotation.set(slope, -sim.heading, lean);
+    } else {
+      rig.rotation.set(-sim.flip * 1 + slope * 0.4, -sim.heading - sim.spin, lean * 0.5);
+    }
+  }
+  const wantTuck = (inp.tuck && sim.grounded ? 1 : 0) + (!sim.grounded ? 0.5 : 0);
+  m.tuck = damp(m.tuck, wantTuck, 10, dt);
+  m.torsoPivot.rotation.x = -0.15 - m.tuck * 0.85;
+  m.torsoPivot.position.y = 0.62 - m.tuck * 0.18;
+  m.head.rotation.x = m.tuck * 0.5;
+  for (let i = 0; i < 2; i++) {
+    m.arms[i].rotation.x = -0.4 - m.tuck * 0.9;
+    m.arms[i].rotation.z = (i === 0 ? 1 : -1) * (0.25 + (sim.grounded ? 0 : 0.5));
+  }
+}
+
+// ---------- Kamera ----------
+const tmp = new THREE.Vector3();
+function updateCamera(dt) {
+  const sp = sim.speed;
+  if (state === 'menu') {
+    const a = time * 0.35;
+    const tx = sim.x + Math.sin(a) * 6.5;
+    const tz = sim.z + Math.cos(a) * 6.5;
+    camPos.set(tx, heightAt(tx, tz) + 2.4, tz);
+    camera.position.copy(camPos);
+    camera.lookAt(sim.x, sim.y + 1.0, sim.z);
+    fov = damp(fov, 55, 4, dt);
+  } else {
+    const mv = sp > 2 ? Math.atan2(sim.vx, -sim.vz) : sim.heading;
+    let diff = mv - camYaw;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    camYaw += diff * (1 - Math.exp(-3.2 * dt));
+    const dist = 8.2 + sp * 0.035;
+    const up = 3.3 + sp * 0.012;
+    const bx = sim.x - Math.sin(camYaw) * dist;
+    const bz = sim.z + Math.cos(camYaw) * dist;
+    const by = Math.max(sim.y + up * 0.8, heightAt(bx, bz) + 1.4) + up * 0.3;
+    tmp.set(bx, by, bz);
+    const k = state === 'over' ? 1.5 : 7;
+    camPos.x = damp(camPos.x, tmp.x, k, dt);
+    camPos.y = damp(camPos.y, tmp.y, k, dt);
+    camPos.z = damp(camPos.z, tmp.z, k, dt);
+    camPos.y = Math.max(camPos.y, heightAt(camPos.x, camPos.z) + 1.0);
+    camera.position.copy(camPos);
+    if (shake > 0) {
+      camera.position.x += (Math.random() - 0.5) * shake * 0.5;
+      camera.position.y += (Math.random() - 0.5) * shake * 0.5;
+      shake = Math.max(0, shake - dt * 2.2);
+    }
+    camera.lookAt(sim.x + Math.sin(camYaw) * 6, sim.y + 1.2, sim.z - Math.cos(camYaw) * 6);
+    const wantFov = 62 + clampN(sp, 0, 70) * 0.5 + (sim.grounded ? 0 : 4);
+    fov = damp(fov, wantFov, 3, dt);
+  }
+  if (Math.abs(camera.fov - fov) > 0.01) {
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+  }
+}
+
+// ---------- HUD ----------
+let hudT = 0;
+function updateHud() {
+  $('speed').textContent = Math.round(sim.speed * 3.6);
+  $('score').textContent = Math.round(score).toLocaleString('de-CH');
+  $('best').textContent = 'Bestwert ' + best.toLocaleString('de-CH');
+  $('dist').textContent = Math.round(-sim.z) + ' m';
+  const cb = $('combo');
+  if (streak > 0 && comboT > 0) {
+    cb.classList.remove('hidden');
+    cb.textContent = 'x' + mult().toFixed(1);
+    $('combobar').style.width = (comboT / 5) * 100 + '%';
+    $('combowrap').classList.remove('hidden');
+  } else {
+    cb.classList.add('hidden');
+    $('combowrap').classList.add('hidden');
+  }
+  // Tempo-Vignette
+  const v = clampN((sim.speed - 25) / 45, 0, 1);
+  $('vignette').style.opacity = (v * 0.9).toFixed(2);
+}
+
+// ---------- Resize ----------
+function resize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------- Hauptschleife ----------
+let last = performance.now();
+const FIXED = 1 / 120;
+let acc = 0;
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  time += dt;
+
+  if (startEdge) {
+    startEdge = false;
+    if (state === 'menu' || (state === 'over' && overTimer > 0.7)) startRun();
+  }
+
+  const inp = readInput();
+
+  if (state === 'playing') {
+    acc += dt;
+    let first = true;
+    while (acc >= FIXED) {
+      acc -= FIXED;
+      sim.update(FIXED, { ...inp, jumpPressed: first && inp.jumpPressed });
+      first = false;
+      if (!sim.crashed) checkObstacles();
+      if (sim.crashed) break;
+    }
+    handleEvents();
+    // Punkte: Distanz + Tricks
+    score = -sim.z * 0.5 + trickScore;
+    if (comboT > 0) {
+      comboT -= dt;
+      if (comboT <= 0) streak = 0;
+    }
+    if (sim.crashed) {
+      state = 'over';
+      overTimer = 0;
+      score = -sim.z * 0.5 + trickScore;
+      setTimeout(endRun, 900);
+    }
+  } else if (state === 'over') {
+    overTimer += dt;
+    sim.update(dt, inp);
+  }
+  jumpEdge = false;
+
+  world.update(sim.z, state === 'playing' || state === 'over' ? 1 : 0);
+
+  // Spray an den Skiern
+  if (state === 'playing' && sim.grounded && sim.carve > 0.15 && sim.speed > 6) {
+    const side = Math.cos(sim.heading);
+    const n = Math.ceil(sim.carve * sim.speed * 0.18);
+    spray.emit(
+      sim.x, sim.y + 0.1, sim.z,
+      -sim.vx * 0.12 + side * (Math.random() - 0.5) * 4, 1.5 + sim.carve * 2.5, -sim.vz * 0.12,
+      2.5, n
+    );
+  }
+  spray.update(dt);
+
+  poseSkier(dt, inp);
+  updateCamera(dt);
+  snowfall.update(dt, camera.position, time);
+  mountains.position.set(camera.position.x, sim.y, camera.position.z);
+
+  sun.position.set(sim.x - 70, sim.y + 110, sim.z + 60);
+  sun.target.position.set(sim.x, sim.y, sim.z);
+  sun.target.updateMatrixWorld();
+
+  audio.update(sim.speed, sim.carve, sim.grounded, state === 'playing');
+
+  hudT += dt;
+  if (hudT > 0.05) {
+    hudT = 0;
+    if (state === 'playing') updateHud();
+  }
+
+  renderer.render(scene, camera);
+}
+
+// Start: Welt vorbauen, Menü zeigen
+world.update(0, 99);
+$('best').textContent = 'Bestwert ' + best.toLocaleString('de-CH');
+$('m-best').textContent = best ? 'Dein Bestwert: ' + best.toLocaleString('de-CH') : 'Noch kein Rekord – hol dir den ersten!';
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
