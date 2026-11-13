@@ -110,6 +110,17 @@ body.touch .mute { display: none; }
   .stats { margin: 8px 0 12px; grid-template-columns: repeat(4, 1fr); }
 }
 
+/* Ziele, Tore */
+.goals { margin: 14px 0 18px; text-align: left; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,0.08); }
+.goals h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.goals .gt { letter-spacing: 1px; }
+.goals ul { list-style: none; display: grid; gap: 4px; font-size: 14px; }
+.goals li::before { content: "\25CB"; margin-right: 8px; opacity: 0.7; }
+.goals li.done { color: #7dffb3; font-weight: 800; }
+.goals li.done::before { content: "\2713"; opacity: 1; }
+.pop.gate { color: #ff9d42; }
+@media (max-height: 460px) { .goals { margin: 8px 0; padding: 6px 12px; } .goals ul { font-size: 12px; } }
+
 </style>
 </head>
 <body>
@@ -140,6 +151,7 @@ body.touch .mute { display: none; }
     <div class="eyebrow">Endlose Abfahrt</div>
     <h1>SKI<span>FAHREN</span></h1>
     <p class="m-best" id="m-best"></p>
+    <div class="goals"><h3>Deine Ziele</h3><ul id="m-goals"></ul></div>
     <button id="start" class="cta">Los geht's <small>Leertaste</small></button>
     <div class="controls">
       <div><b>← →</b> / <b>A D</b><span>Carven</span></div>
@@ -169,6 +181,7 @@ body.touch .mute { display: none; }
       <div><span id="o-speed">0</span><small>Top-Tempo</small></div>
       <div><span id="o-trick">0</span><small>Bester Trick</small></div>
     </div>
+    <div id="o-goalwrap" class="goals"><h3>Ziele <span class="gt">Tore: <b id="o-gates">0</b></span></h3><ul id="o-goals"></ul></div>
     <button id="retry" class="cta">Nochmal <small>Leertaste / R</small></button>
   </div>
 </div>
@@ -294,6 +307,28 @@ function obstaclesInRange(zA, zB) {
       const s = 0.8 + hash(id * 4.7) * (type === 'tree' ? 1.1 : 0.9);
       out.push({ id, type, x, z, y: heightAt(x, z), s, r: (type === 'tree' ? 0.75 : 0.95) * s });
     }
+  }
+  return out;
+}
+
+// ---- Boost-Tore (Ringe) ----
+const GATE_CELL = 140;
+const GATE_R = 3.4;
+
+function gateForCell(k) {
+  if (k < 1) return null;
+  const z = -(k * GATE_CELL + 50 + hash(k * 11.3) * 60);
+  const x = centerX(z) + (hash(k * 6.7) - 0.5) * 26;
+  return { id: k, x, z, y: heightAt(x, z) + 2.1, r: GATE_R };
+}
+
+function gatesInRange(zA, zB) {
+  const out = [];
+  const k0 = Math.max(1, Math.floor(-zA / GATE_CELL) - 1);
+  const k1 = Math.floor(-zB / GATE_CELL) + 1;
+  for (let k = k0; k <= k1; k++) {
+    const g = gateForCell(k);
+    if (g && g.z <= zA && g.z > zB) out.push(g);
   }
   return out;
 }
@@ -470,6 +505,16 @@ class SkierSim {
     this.events.push({ type: 'crash', reason });
   }
 
+  // Tempo-Schub entlang der aktuellen Fahrtrichtung (Boost-Tore)
+  boost(dv, cap = 85) {
+    const sp = this.speed;
+    if (sp < 0.5) return;
+    const target = Math.min(cap, sp + dv);
+    const f = target / sp;
+    this.vx *= f;
+    this.vz *= f;
+  }
+
   drainEvents() {
     const e = this.events;
     this.events = [];
@@ -593,6 +638,12 @@ class GameAudio {
   }
   close() {
     this.tone(900, 0.12, 0.12, 'square', 1.6);
+  }
+  gate(level) {
+    const b = 600 + Math.min(6, level) * 70;
+    this.tone(b, 0.12, 0.2, 'sawtooth', 1.5);
+    setTimeout(() => this.tone(b * 2, 0.3, 0.16, 'triangle'), 70);
+    this.burst(2400, 0.25, 0.12, 'highpass');
   }
   start() {
     this.tone(330, 0.15, 0.2, 'triangle');
@@ -888,6 +939,24 @@ class World {
     this.vcMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
     this.rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
     this.dummy = new THREE.Object3D();
+    this.gateGeo = new THREE.TorusGeometry(3.4, 0.22, 8, 32);
+    this.gateMat = new THREE.MeshBasicMaterial({ color: 0xff8a2a, fog: false });
+    this.gateDoneMat = new THREE.MeshBasicMaterial({ color: 0x66e0a3, transparent: true, opacity: 0.35, fog: false });
+  }
+
+  gatesNear(z) {
+    const c = Math.max(0, Math.floor(-z / CS));
+    const out = [];
+    for (let k = c - 1; k <= c + 2; k++) {
+      const ch = this.chunks.get(k);
+      if (ch) for (const g of ch.gates) out.push(g);
+    }
+    return out;
+  }
+
+  markGate(g) {
+    g.passed = true;
+    g.mesh.material = this.gateDoneMat;
   }
 
   reset() {
@@ -1055,8 +1124,15 @@ class World {
     pm.frustumCulled = false;
     group.add(pm);
 
+    const gates = gatesInRange(z0, z0 - CS).map((g) => {
+      const m = new THREE.Mesh(this.gateGeo, this.gateMat);
+      m.position.set(g.x, g.y, g.z);
+      group.add(m);
+      return { ...g, mesh: m, passed: false };
+    });
+
     this.scene.add(group);
-    return { group, mesh, obstacles };
+    return { group, mesh, obstacles, gates };
   }
 }
 
@@ -1087,23 +1163,30 @@ const scene = new THREE.Scene();
 const HORIZON = new THREE.Color(0xcfe2f3).convertSRGBToLinear();
 scene.fog = new THREE.FogExp2(HORIZON, 0.0032);
 
-// Himmel: vertikaler Verlauf
-{
+// Tageszeiten: wechseln pro Lauf
+const THEMES = [
+  { name: 'Tag', sky: ['#2f6fc0', '#7fb4e6', '#cfe2f3', '#e8f1fa'], fog: 0xcfe2f3, sun: 0xfff1d6, sunI: 2.2, hemi: [0xcfe6ff, 0xdfe8f5, 0.75], mt: 0xffffff, sunDir: [-70, 110, 60], exp: 0.95 },
+  { name: 'Sonnenuntergang', sky: ['#35457f', '#c8718a', '#f4a56a', '#ffd9a0'], fog: 0xf0b88a, sun: 0xffa45c, sunI: 2.0, hemi: [0xffc9a0, 0xe9c4c4, 0.65], mt: 0xffc9b0, sunDir: [-120, 45, -80], exp: 1.0 },
+  { name: 'Blaue Stunde', sky: ['#0d1b3d', '#2c4a86', '#6f8fc4', '#aebfe0'], fog: 0x8fa5cf, sun: 0xaecbff, sunI: 1.3, hemi: [0x9fb6e8, 0xb9c6e4, 0.7], mt: 0xb4c4ee, sunDir: [80, 90, 70], exp: 1.05 },
+];
+let themeIdx = 0;
+function makeSky(stops) {
   const c = document.createElement('canvas');
   c.width = 4;
   c.height = 256;
   const g = c.getContext('2d');
   const grad = g.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, '#2f6fc0');
-  grad.addColorStop(0.45, '#7fb4e6');
-  grad.addColorStop(0.8, '#cfe2f3');
-  grad.addColorStop(1, '#e8f1fa');
+  grad.addColorStop(0, stops[0]);
+  grad.addColorStop(0.45, stops[1]);
+  grad.addColorStop(0.8, stops[2]);
+  grad.addColorStop(1, stops[3]);
   g.fillStyle = grad;
   g.fillRect(0, 0, 4, 256);
   const tex = new THREE.CanvasTexture(c);
   tex.encoding = THREE.sRGBEncoding;
-  scene.background = tex;
+  return tex;
 }
+scene.background = makeSky(THEMES[0].sky);
 
 const camera = new THREE.PerspectiveCamera(64, 1, 0.1, 3500);
 
@@ -1125,8 +1208,9 @@ scene.add(sun, sun.target);
 
 // Berge am Horizont (folgen der Kamera)
 const mountains = new THREE.Group();
+const mtMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
 {
-  const mat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
+  const mat = mtMat;
   for (let i = 0; i < 26; i++) {
     const a = (i / 26) * Math.PI * 2 + Math.sin(i * 12.9) * 0.15;
     const h = 260 + ((Math.sin(i * 78.2) + 1) / 2) * 420;
@@ -1157,6 +1241,21 @@ const skier = createSkier();
 scene.add(skier.root);
 const audio = new GameAudio();
 const sim = new SkierSim();
+
+function applyTheme(i) {
+  const t = THEMES[i % THEMES.length];
+  themeIdx = i % THEMES.length;
+  if (scene.background && scene.background.dispose) scene.background.dispose();
+  scene.background = makeSky(t.sky);
+  scene.fog.color.set(t.fog).convertSRGBToLinear();
+  sun.color.set(t.sun);
+  sun.intensity = t.sunI;
+  hemi.color.set(t.hemi[0]);
+  hemi.groundColor.set(t.hemi[1]);
+  hemi.intensity = t.hemi[2];
+  mtMat.color.set(t.mt);
+  renderer.toneMappingExposure = t.exp;
+}
 
 // ---------- Eingabe ----------
 const keys = new Set();
@@ -1257,6 +1356,42 @@ let camPos = new THREE.Vector3(0, 10, 12);
 let fov = 64;
 let bestTrick = 0;
 let closeCalls = 0;
+let gatesHit = 0;
+let bestSpins = 0;
+let bestAir = 0;
+let runCount = 0;
+
+const GOALS = [
+  { id: 'd500', text: '500 m weit fahren', test: (r) => r.dist >= 500 },
+  { id: 'g3', text: '3 Boost-Tore in einem Lauf', test: (r) => r.gates >= 3 },
+  { id: 's180', text: 'Eine 180° sauber landen', test: (r) => r.spins >= 1 },
+  { id: 'c5', text: '5x knapp ausweichen', test: (r) => r.close >= 5 },
+  { id: 'v100', text: '100 km/h erreichen', test: (r) => r.speed >= 100 },
+  { id: 'd1500', text: '1500 m weit fahren', test: (r) => r.dist >= 1500 },
+  { id: 's360', text: 'Eine 360° sauber landen', test: (r) => r.spins >= 2 },
+  { id: 'a2', text: '2 Sekunden Flugzeit', test: (r) => r.air >= 2 },
+  { id: 'g8', text: '8 Boost-Tore in einem Lauf', test: (r) => r.gates >= 8 },
+  { id: 'p5000', text: '5000 Punkte in einem Lauf', test: (r) => r.score >= 5000 },
+  { id: 'v140', text: '140 km/h erreichen', test: (r) => r.speed >= 140 },
+  { id: 's720', text: 'Eine 720° sauber landen', test: (r) => r.spins >= 4 },
+];
+let goalsDone = [];
+try {
+  goalsDone = JSON.parse(localStorage.getItem('skifahren.goals') || '[]');
+  if (!Array.isArray(goalsDone)) goalsDone = [];
+} catch (e) {
+  goalsDone = [];
+}
+const openGoals = () => GOALS.filter((g) => !goalsDone.includes(g.id)).slice(0, 3);
+function renderGoals(el, list, doneIds = []) {
+  el.innerHTML = '';
+  for (const g of list) {
+    const li = document.createElement('li');
+    li.textContent = g.text;
+    if (doneIds.includes(g.id)) li.className = 'done';
+    el.appendChild(li);
+  }
+}
 
 const mult = () => Math.min(8, 1 + 0.5 * streak);
 
@@ -1285,7 +1420,11 @@ function startRun() {
   comboT = 0;
   bestTrick = 0;
   closeCalls = 0;
+  gatesHit = 0;
+  bestSpins = 0;
+  bestAir = 0;
   overTimer = 0;
+  applyTheme(runCount++);
   camYaw = 0;
   state = 'playing';
   $('menu').classList.add('hidden');
@@ -1312,6 +1451,18 @@ function endRun() {
   $('o-dist').textContent = Math.round(-sim.z) + ' m';
   $('o-speed').textContent = Math.round(sim.maxSpeed * 3.6) + ' km/h';
   $('o-trick').textContent = bestTrick.toLocaleString('de-CH');
+  const run = { dist: -sim.z, gates: gatesHit, spins: bestSpins, close: closeCalls, speed: sim.maxSpeed * 3.6, air: bestAir, score: total };
+  const before = openGoals();
+  const newly = before.filter((g) => g.test(run));
+  if (newly.length) {
+    goalsDone = goalsDone.concat(newly.map((g) => g.id));
+    try {
+      localStorage.setItem('skifahren.goals', JSON.stringify(goalsDone));
+    } catch (e) {}
+  }
+  $('o-goalwrap').classList.toggle('hidden', before.length === 0);
+  renderGoals($('o-goals'), before, newly.map((g) => g.id));
+  $('o-gates').textContent = gatesHit;
   $('over').classList.remove('hidden');
 }
 
@@ -1325,6 +1476,10 @@ function handleEvents() {
       if (e.impact > 6) audio.land(e.impact);
       spray.emit(sim.x, sim.y + 0.2, sim.z, 0, 3, 0, 7, Math.min(60, 8 + e.impact * 3));
       shake = Math.max(shake, Math.min(0.5, e.impact * 0.02));
+      if (e.clean) {
+        bestSpins = Math.max(bestSpins, e.spins);
+        bestAir = Math.max(bestAir, e.airTime);
+      }
       if (big && e.clean) {
         const pts = e.airTime * 60 + e.spins * 150 + e.flips * 350;
         const parts = [];
@@ -1369,6 +1524,29 @@ function checkObstacles() {
       comboT = 5;
       award(40 + sim.speed, 'KNAPP', 'close');
       audio.close();
+    }
+  }
+}
+
+// ---------- Boost-Tore ----------
+function checkGates(prevZ) {
+  for (const g of world.gatesNear(sim.z)) {
+    if (g.passed) continue;
+    if (prevZ > g.z && sim.z <= g.z) {
+      const d = Math.hypot(sim.x - g.x, sim.y + 0.9 - g.y);
+      if (d < g.r) {
+        world.markGate(g);
+        gatesHit++;
+        streak++;
+        comboT = 5;
+        sim.boost(5);
+        shake = Math.max(shake, 0.2);
+        award(100 + gatesHit * 10, `TOR ${gatesHit}`, 'gate');
+        audio.gate(gatesHit);
+      } else if (d < g.r + 2.5) {
+        g.passed = true;
+        popup('KNAPP DANEBEN', 'bad');
+      }
     }
   }
 }
@@ -1494,7 +1672,9 @@ const FIXED = 1 / 120;
 let acc = 0;
 
 function frame(now) {
-  requestAnimationFrame(frame);
+  renderGoals($('m-goals'), openGoals());
+applyTheme(0);
+requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   time += dt;
@@ -1511,9 +1691,13 @@ function frame(now) {
     let first = true;
     while (acc >= FIXED) {
       acc -= FIXED;
+      const pz = sim.z;
       sim.update(FIXED, { ...inp, jumpPressed: first && inp.jumpPressed });
       first = false;
-      if (!sim.crashed) checkObstacles();
+      if (!sim.crashed) {
+        checkObstacles();
+        checkGates(pz);
+      }
       if (sim.crashed) break;
     }
     handleEvents();
@@ -1554,7 +1738,8 @@ function frame(now) {
   snowfall.update(dt, camera.position, time);
   mountains.position.set(camera.position.x, sim.y, camera.position.z);
 
-  sun.position.set(sim.x - 70, sim.y + 110, sim.z + 60);
+  const sd = THEMES[themeIdx].sunDir;
+  sun.position.set(sim.x + sd[0], sim.y + sd[1], sim.z + sd[2]);
   sun.target.position.set(sim.x, sim.y, sim.z);
   sun.target.updateMatrixWorld();
 
@@ -1573,6 +1758,8 @@ function frame(now) {
 world.update(0, 99);
 $('best').textContent = 'Bestwert ' + best.toLocaleString('de-CH');
 $('m-best').textContent = best ? 'Dein Bestwert: ' + best.toLocaleString('de-CH') : 'Noch kein Rekord – hol dir den ersten!';
+renderGoals($('m-goals'), openGoals());
+applyTheme(0);
 requestAnimationFrame(frame);
 
 })();

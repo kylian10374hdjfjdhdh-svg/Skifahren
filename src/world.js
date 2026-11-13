@@ -1,5 +1,5 @@
 // Endlose Welt: Gelände wird in Chunks vor dem Skifahrer erzeugt und hinten entfernt.
-import { heightAt, centerX, obstaclesInRange, kickerHeight, smoothstep, PISTE_HALF } from './terrain.js';
+import { heightAt, centerX, obstaclesInRange, kickerHeight, smoothstep, PISTE_HALF, gatesInRange } from './terrain.js';
 
 const THREE = window.THREE;
 
@@ -105,6 +105,24 @@ export class World {
     this.vcMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
     this.rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
     this.dummy = new THREE.Object3D();
+    this.gateGeo = new THREE.TorusGeometry(3.4, 0.22, 8, 32);
+    this.gateMat = new THREE.MeshBasicMaterial({ color: 0xff8a2a, fog: false });
+    this.gateDoneMat = new THREE.MeshBasicMaterial({ color: 0x66e0a3, transparent: true, opacity: 0.35, fog: false });
+  }
+
+  gatesNear(z) {
+    const c = Math.max(0, Math.floor(-z / CS));
+    const out = [];
+    for (let k = c - 1; k <= c + 2; k++) {
+      const ch = this.chunks.get(k);
+      if (ch) for (const g of ch.gates) out.push(g);
+    }
+    return out;
+  }
+
+  markGate(g) {
+    g.passed = true;
+    g.mesh.material = this.gateDoneMat;
   }
 
   reset() {
@@ -272,7 +290,14 @@ export class World {
     pm.frustumCulled = false;
     group.add(pm);
 
+    const gates = gatesInRange(z0, z0 - CS).map((g) => {
+      const m = new THREE.Mesh(this.gateGeo, this.gateMat);
+      m.position.set(g.x, g.y, g.z);
+      group.add(m);
+      return { ...g, mesh: m, passed: false };
+    });
+
     this.scene.add(group);
-    return { group, mesh, obstacles };
+    return { group, mesh, obstacles, gates };
   }
 }

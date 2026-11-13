@@ -102,3 +102,14 @@ body.touch .mute { display: none; }
   .final { font-size: 52px; }
   .stats { margin: 8px 0 12px; grid-template-columns: repeat(4, 1fr); }
 }
+
+/* Ziele, Tore */
+.goals { margin: 14px 0 18px; text-align: left; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,0.08); }
+.goals h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.goals .gt { letter-spacing: 1px; }
+.goals ul { list-style: none; display: grid; gap: 4px; font-size: 14px; }
+.goals li::before { content: "\25CB"; margin-right: 8px; opacity: 0.7; }
+.goals li.done { color: #7dffb3; font-weight: 800; }
+.goals li.done::before { content: "\2713"; opacity: 1; }
+.pop.gate { color: #ff9d42; }
+@media (max-height: 460px) { .goals { margin: 8px 0; padding: 6px 12px; } .goals ul { font-size: 12px; } }

@@ -117,3 +117,25 @@ export function obstaclesInRange(zA, zB) {
   }
   return out;
 }
+
+// ---- Boost-Tore (Ringe) ----
+export const GATE_CELL = 140;
+export const GATE_R = 3.4;
+
+export function gateForCell(k) {
+  if (k < 1) return null;
+  const z = -(k * GATE_CELL + 50 + hash(k * 11.3) * 60);
+  const x = centerX(z) + (hash(k * 6.7) - 0.5) * 26;
+  return { id: k, x, z, y: heightAt(x, z) + 2.1, r: GATE_R };
+}
+
+export function gatesInRange(zA, zB) {
+  const out = [];
+  const k0 = Math.max(1, Math.floor(-zA / GATE_CELL) - 1);
+  const k1 = Math.floor(-zB / GATE_CELL) + 1;
+  for (let k = k0; k <= k1; k++) {
+    const g = gateForCell(k);
+    if (g && g.z <= zA && g.z > zB) out.push(g);
+  }
+  return out;
+}

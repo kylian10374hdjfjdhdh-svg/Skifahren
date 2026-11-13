@@ -171,6 +171,16 @@ export class SkierSim {
     this.events.push({ type: 'crash', reason });
   }
 
+  // Tempo-Schub entlang der aktuellen Fahrtrichtung (Boost-Tore)
+  boost(dv, cap = 85) {
+    const sp = this.speed;
+    if (sp < 0.5) return;
+    const target = Math.min(cap, sp + dv);
+    const f = target / sp;
+    this.vx *= f;
+    this.vz *= f;
+  }
+
   drainEvents() {
     const e = this.events;
     this.events = [];

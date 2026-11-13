@@ -60,4 +60,21 @@ assert.ok(obstaclesInRange(-100, -1500).length > 100, 'Zu wenige Hindernisse');
   console.log('Luftframes im Zufallslauf:', air);
 }
 
+// 7) Tore: deterministisch, in Reichweite, Boost erhöht Tempo
+{
+  const { gateForCell, gatesInRange } = await import('../src/terrain.js');
+  assert.deepEqual(gateForCell(5), gateForCell(5));
+  assert.equal(gateForCell(0), null);
+  const gs = gatesInRange(-100, -1500);
+  assert.ok(gs.length >= 8, 'zu wenige Tore: ' + gs.length);
+  const s = new SkierSim();
+  for (let i = 0; i < 300; i++) s.update(1 / 60, none);
+  const before = s.speed;
+  s.boost(6);
+  assert.ok(Math.abs(s.speed - Math.min(85, before + 6)) < 0.01, 'Boost +6');
+  s.boost(500);
+  assert.ok(s.speed <= 85.001, 'Boost gedeckelt');
+  console.log('Tore ok:', gs.length);
+}
+
 console.log('Alle Tests bestanden.');

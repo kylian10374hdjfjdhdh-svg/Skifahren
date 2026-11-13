@@ -115,6 +115,12 @@ export class GameAudio {
   close() {
     this.tone(900, 0.12, 0.12, 'square', 1.6);
   }
+  gate(level) {
+    const b = 600 + Math.min(6, level) * 70;
+    this.tone(b, 0.12, 0.2, 'sawtooth', 1.5);
+    setTimeout(() => this.tone(b * 2, 0.3, 0.16, 'triangle'), 70);
+    this.burst(2400, 0.25, 0.12, 'highpass');
+  }
   start() {
     this.tone(330, 0.15, 0.2, 'triangle');
     setTimeout(() => this.tone(660, 0.25, 0.2, 'triangle'), 110);
