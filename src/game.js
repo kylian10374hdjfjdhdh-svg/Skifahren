@@ -1,5 +1,5 @@
 import { SkierSim } from './sim.js';
-import { heightAt, gradientAt, centerX } from './terrain.js';
+import { heightAt, gradientAt, centerX, kickersForCell, gateForCell } from './terrain.js';
 import { GameAudio } from './audio.js';
 import { Spray, Snowfall, Trail } from './fx.js';
 import { createSkier } from './skier-model.js';
@@ -30,9 +30,9 @@ scene.fog = new THREE.FogExp2(HORIZON, 0.0027);
 
 // Tageszeiten: wechseln pro Lauf
 const THEMES = [
-  { name: 'Tag', sky: ['#2f6fc0', '#7fb4e6', '#cfe2f3', '#e8f1fa'], fog: 0xcfe2f3, sun: 0xfff1d6, sunI: 2.0, hemi: [0xbfd8f5, 0xaebfd8, 0.7], mt: 0xffffff, sunDir: [-70, 80, 60], exp: 0.85 },
-  { name: 'Sonnenuntergang', sky: ['#35457f', '#c8718a', '#f4a56a', '#ffd9a0'], fog: 0xf0b88a, sun: 0xffa45c, sunI: 1.9, hemi: [0xffc9a0, 0xc9a9b4, 0.6], mt: 0xffc9b0, sunDir: [-120, 45, -80], exp: 0.95 },
-  { name: 'Blaue Stunde', sky: ['#0d1b3d', '#2c4a86', '#6f8fc4', '#aebfe0'], fog: 0x8fa5cf, sun: 0xaecbff, sunI: 1.3, hemi: [0x9fb6e8, 0x8fa0c8, 0.7], mt: 0xb4c4ee, sunDir: [80, 90, 70], exp: 1.0 },
+  { name: 'Tag', sky: ['#2f6fc0', '#7fb4e6', '#cfe2f3', '#e8f1fa'], fog: 0xcfe2f3, sun: 0xfff1d6, sunI: 1.7, hemi: [0xcfe3ff, 0xc2d0e6, 1.0], mt: 0xffffff, sunDir: [-70, 80, 60], exp: 0.85 },
+  { name: 'Sonnenuntergang', sky: ['#4a4f9a', '#d9788f', '#ffae6e', '#ffe0a8'], fog: 0xf5bf94, sun: 0xff9a4d, sunI: 2.0, hemi: [0xffcfae, 0xe0b0b8, 0.8], mt: 0xffcdb4, sunDir: [-120, 40, -80], exp: 1.0 },
+  { name: 'Blaue Stunde', sky: ['#1a2f66', '#3f64a8', '#8fb0dd', '#c9d8f0'], fog: 0xa4b9dc, sun: 0xcfe0ff, sunI: 1.5, hemi: [0xc2d4fa, 0xa8b8dc, 1.0], mt: 0xc4d2f4, sunDir: [80, 90, 70], exp: 1.05 },
 ];
 let themeIdx = 0;
 function makeSky(stops) {
@@ -73,7 +73,7 @@ scene.add(sun, sun.target);
 
 // Berge am Horizont (folgen der Kamera)
 const mountains = new THREE.Group();
-const mtMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
+const mtMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
 {
   const mat = mtMat;
   for (let i = 0; i < 26; i++) {
@@ -347,6 +347,7 @@ function endRun() {
   $('o-goalwrap').classList.toggle('hidden', before.length === 0);
   renderGoals($('o-goals'), before, newly.map((g) => g.id));
   $('o-gates').textContent = gatesHit;
+  $('touchui').classList.add('hidden');
   $('over').classList.remove('hidden');
 }
 
@@ -570,19 +571,19 @@ resize();
 // ---------- Adaptive Auflösung (gegen Lag) ----------
 let ema = 16;
 let adaptT = 0;
+const NO_ADAPT = /[?&]noadapt/.test(location.search || '');
+const PR_MIN = Math.min(PR_MAX, 1);
 function adapt(dt) {
+  if (NO_ADAPT) return;
   ema = ema * 0.95 + dt * 1000 * 0.05;
   adaptT += dt;
-  if (adaptT < 1.2) return;
+  if (adaptT < 1.5) return;
   adaptT = 0;
-  if (ema > 24 && pr > 0.6) {
-    pr = Math.max(0.6, pr * 0.85);
-    renderer.setPixelRatio(pr);
-    renderer.setSize(window.innerWidth, window.innerHeight, false);
-  } else if (ema > 30 && pr <= 0.6 && sun.castShadow) {
+  // Erst teure Schatten abschalten, die Schärfe bleibt erhalten
+  if (ema > 26 && sun.castShadow) {
     sun.castShadow = false;
-  } else if (ema < 15 && pr < PR_MAX) {
-    pr = Math.min(PR_MAX, pr * 1.08);
+  } else if (ema > 34 && pr > PR_MIN) {
+    pr = Math.max(PR_MIN, pr * 0.9);
     renderer.setPixelRatio(pr);
     renderer.setSize(window.innerWidth, window.innerHeight, false);
   }
@@ -594,9 +595,7 @@ const FIXED = 1 / 120;
 let acc = 0;
 
 function frame(now) {
-  renderGoals($('m-goals'), openGoals());
-applyTheme(0);
-requestAnimationFrame(frame);
+  requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   time += dt;
@@ -655,7 +654,7 @@ requestAnimationFrame(frame);
   // Spray an den Skiern
   if (state === 'playing' && sim.grounded && sim.carve > 0.15 && sim.speed > 6) {
     const side = Math.cos(sim.heading);
-    const n = Math.ceil(sim.carve * sim.speed * 0.18);
+    const n = Math.ceil(sim.carve * sim.speed * 0.09);
     spray.emit(
       sim.x, sim.y + 0.1, sim.z,
       -sim.vx * 0.12 + side * (Math.random() - 0.5) * 4, 1.5 + sim.carve * 2.5, -sim.vz * 0.12,
@@ -693,4 +692,5 @@ $('best').textContent = 'Bestwert ' + best.toLocaleString('de-CH');
 $('m-best').textContent = best ? 'Dein Bestwert: ' + best.toLocaleString('de-CH') : 'Noch kein Rekord – hol dir den ersten!';
 renderGoals($('m-goals'), openGoals());
 applyTheme(0);
+window.__dbg = { sim, world, camera, startRun, get state() { return state; }, THEMES, applyTheme, heightAt, kickersForCell, gateForCell };
 requestAnimationFrame(frame);

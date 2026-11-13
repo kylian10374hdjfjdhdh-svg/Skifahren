@@ -125,3 +125,35 @@ body.touch .mute { display: none; }
 .tbtn.boost { background: #1f8fd6; border-color: rgba(255,255,255,0.6); }
 .tbtn { min-width: 0; flex: 1 1 0; max-width: 150px; padding: 14px 6px; font-size: 15px; }
 .tbtn.on { background: rgba(255,210,63,0.6); }
+
+/* Feinschliff: Menü passt in jede Fensterhöhe, HUD skaliert mit der kleineren Bildschirmseite */
+.speed { font-size: clamp(38px, 8vmin, 84px); }
+.score { font-size: clamp(30px, 6vmin, 52px); }
+.panel { max-height: 100%; overflow: auto; padding: 22px 26px 20px; }
+h1 { font-size: clamp(44px, min(11vw, 13vh), 88px); }
+.m-best { margin-bottom: 10px; }
+.goals { margin: 10px 0 14px; }
+.controls { grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 16px 0 8px; }
+.controls div { padding: 6px 10px; }
+.controls b { font-size: 12.5px; }
+.controls span { font-size: 11.5px; }
+@media (max-width: 640px) { .controls { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 420px) { .controls { grid-template-columns: 1fr; } }
+
+/* Kurze Bildschirme (Handy quer): alles muss ohne Scrollen passen */
+@media (max-height: 460px) {
+  body.touch .touch-help, .tip, .touch-only { display: none !important; }
+  .panel { padding: 12px 18px; }
+  .eyebrow { font-size: 10px; letter-spacing: 3px; }
+  h1 { font-size: 42px; }
+  .final { font-size: 44px; letter-spacing: -2px; }
+  .newbest { margin: 0 0 4px; padding: 2px 12px; font-size: 13px; }
+  .stats { margin: 6px 0; gap: 6px; }
+  .stats div { padding: 5px 2px; }
+  .stats span { font-size: 15px; }
+  .stats small { font-size: 9px; }
+  .goals { margin: 6px 0 8px; padding: 6px 12px; }
+  .goals h3 { margin-bottom: 3px; }
+  .goals ul { gap: 1px; font-size: 12px; }
+  .cta { padding: 8px 30px; font-size: 17px; }
+}

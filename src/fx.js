@@ -30,10 +30,10 @@ export class Spray {
     geo.setAttribute('position', this.attr);
     const mat = new THREE.PointsMaterial({
       color: 0xffffff,
-      size: 0.85,
+      size: 0.5,
       map: SPRITE,
       transparent: true,
-      opacity: 0.95,
+      opacity: 0.7,
       depthWrite: false,
       sizeAttenuation: true,
     });
@@ -94,10 +94,10 @@ export class Snowfall {
     geo.setAttribute('position', this.attr);
     const mat = new THREE.PointsMaterial({
       color: 0xffffff,
-      size: 0.34,
+      size: 0.2,
       map: SPRITE,
       transparent: true,
-      opacity: 0.95,
+      opacity: 0.85,
       depthWrite: false,
       sizeAttenuation: true,
     });
@@ -123,7 +123,7 @@ export class Snowfall {
 
 // Skispuren im Schnee: zwei Bänder hinter dem Skifahrer
 export class Trail {
-  constructor(scene, n = 240) {
+  constructor(scene, n = 160) {
     this.n = n;
     this.pts = []; // {x,y,z,lx,lz,gap}
     this.pos = new Float32Array(n * 4 * 3);
@@ -140,7 +140,7 @@ export class Trail {
     const mat = new THREE.MeshBasicMaterial({
       color: 0x9fb4cf,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.4,
       depthWrite: false,
       polygonOffset: true,
       polygonOffsetFactor: -4,
@@ -182,7 +182,7 @@ export class Trail {
   rebuild() {
     const P = this.pts;
     const pos = this.pos;
-    const W = 0.06;
+    const W = 0.035;
     const OFF = 0.2;
     for (let i = 0; i < P.length; i++) {
       const p = P[i];

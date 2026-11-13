@@ -150,7 +150,7 @@ export function obstaclesInRange(zA, zB) {
       const z = zc + (hash(id * 3.17) - 0.5) * (OB * 0.9);
       const d = Math.abs(x - cx);
       let type = null;
-      if (d > PISTE_HALF + 2) {
+      if (d > PISTE_HALF + 7) {
         const dens = 0.2 + 0.2 * Math.min(1, (d - PISTE_HALF) / 40);
         if (r < dens) type = 'tree';
         else if (r > 0.97) type = 'rock';

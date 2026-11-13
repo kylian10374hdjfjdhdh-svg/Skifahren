@@ -104,9 +104,14 @@ export class World {
     this.vcMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
     this.rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
     this.dummy = new THREE.Object3D();
+    this.archPole = new THREE.BoxGeometry(0.45, 1, 0.45);
+    this.archPole.translate(0, 0.5, 0);
+    this.archBar = new THREE.BoxGeometry(1, 0.6, 0.45);
+    this.archMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff5a14).convertSRGBToLinear() });
+    this.archMat2 = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff6ea).convertSRGBToLinear() });
     this.gateGeo = new THREE.TorusGeometry(3.4, 0.22, 8, 32);
-    this.gateMat = new THREE.MeshBasicMaterial({ color: 0xff8a2a, fog: false });
-    this.gateDoneMat = new THREE.MeshBasicMaterial({ color: 0x66e0a3, transparent: true, opacity: 0.35, fog: false });
+    this.gateMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb020).convertSRGBToLinear(), fog: false });
+    this.gateDoneMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x66e0a3).convertSRGBToLinear(), transparent: true, opacity: 0.3, fog: false });
   }
 
   gatesNear(z) {
@@ -134,7 +139,7 @@ export class World {
     const c = Math.max(0, Math.floor(-z / CS));
     let built = 0;
     for (let k = c - 1; k <= c + 5; k++) {
-      if (k < 0 || this.chunks.has(k)) continue;
+      if (k < -1 || this.chunks.has(k)) continue;
       if (built >= budget) break;
       this.chunks.set(k, this.buildChunk(k));
       built++;
@@ -203,14 +208,18 @@ export class World {
         let r = mix(0.82 + powder, 0.93 + cord, piste);
         let g = mix(0.87 + powder, 0.95 + cord, piste);
         let b = mix(0.97, 1.0, piste);
+        const edge = 1 - smoothstep(0.8, 3.4, Math.abs(d - (PISTE_HALF - 0.5)));
+        r = mix(r, 0.3, edge * 0.65);
+        g = mix(g, 0.58, edge * 0.65);
+        b = mix(b, 0.95, edge * 0.65);
         const rock = smoothstep(0.82, 0.6, ny);
         r = mix(r, 0.4, rock);
         g = mix(g, 0.42, rock);
         b = mix(b, 0.48, rock);
         if (kickerHeight(x, z) > 0.03) {
-          r = mix(r, 0.45, 0.7);
-          g = mix(g, 0.78, 0.7);
-          b = mix(b, 1.0, 0.7);
+          r = mix(r, 0.1, 0.9);
+          g = mix(g, 0.62, 0.9);
+          b = mix(b, 1.0, 0.9);
         }
         colr[k * 3] = lin(r);
         colr[k * 3 + 1] = lin(g);
@@ -282,28 +291,30 @@ export class World {
     pm.frustumCulled = false;
     group.add(pm);
 
-    // Markierungsstangen an der Schanzenkante: von Weitem erkennbar
-    const lips = [];
+    // Bogen an jeder Schanzenkante: von Weitem unübersehbar
     for (let k = Math.max(1, Math.floor(-z0 / CELL) - 2); k <= Math.floor((CS - z0) / CELL) + 1; k++) {
       for (const kk of kickersForCell(k)) {
         const lz = kk.z0 - kk.len;
-        if (lz <= z0 && lz > z0 - CS) {
-          lips.push([kk.x0 - kk.w * 0.9, lz + 0.5], [kk.x0 + kk.w * 0.9, lz + 0.5]);
+        if (lz > z0 || lz <= z0 - CS) continue;
+        const H = 3.4 + kk.type * 1.4;
+        const hw = kk.w * 0.95;
+        const base = Math.max(heightAt(kk.x0 - hw, lz), heightAt(kk.x0 + hw, lz));
+        for (const sgn of [-1, 1]) {
+          const m = new THREE.Mesh(this.archPole, this.archMat);
+          m.position.set(kk.x0 + sgn * hw, heightAt(kk.x0 + sgn * hw, lz) - 0.2, lz);
+          m.scale.set(1, base + H - heightAt(kk.x0 + sgn * hw, lz) + 0.2, 1);
+          m.castShadow = true;
+          group.add(m);
         }
+        const bar = new THREE.Mesh(this.archBar, this.archMat);
+        bar.position.set(kk.x0, base + H, lz);
+        bar.scale.set(hw * 2 + 0.45, 1, 1);
+        group.add(bar);
+        const stripe = new THREE.Mesh(this.archBar, this.archMat2);
+        stripe.position.set(kk.x0, base + H, lz + 0.05);
+        stripe.scale.set(hw * 2 - 1.2, 0.4, 1.1);
+        group.add(stripe);
       }
-    }
-    if (lips.length) {
-      const lm = new THREE.InstancedMesh(this.poleGeo, this.vcMat, lips.length);
-      lips.forEach(([x, z], i) => {
-        d.position.set(x, heightAt(x, z), z);
-        d.rotation.set(0, 0, 0);
-        d.scale.set(1.3, 1.3, 1.3);
-        d.updateMatrix();
-        lm.setMatrixAt(i, d.matrix);
-      });
-      lm.castShadow = true;
-      lm.frustumCulled = false;
-      group.add(lm);
     }
 
     const gates = gatesInRange(z0, z0 - CS).map((g) => {
