@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "test": "node tests/sim.test.js"
+    "test": "node tests/sim.test.js && node tests/slalom.test.js"
   },
   "license": "MIT"
 }

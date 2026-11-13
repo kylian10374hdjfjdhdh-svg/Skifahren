@@ -1,0 +1,2652 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Skifahren – Slalom</title>
+<style>
+:root {
+  --accent: #ff5a1f;
+  --ice: #6fd3ff;
+  --ink: #0b1220;
+  --glass: rgba(11, 18, 32, 0.55);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #cfe2f3; color: #fff;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  -webkit-user-select: none; user-select: none; touch-action: none; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.hidden { display: none !important; }
+
+#vignette { position: fixed; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0) 55%, rgba(210,235,255,0.55) 100%); }
+
+/* HUD */
+#hud { position: fixed; inset: 0; pointer-events: none; text-shadow: 0 2px 12px rgba(0,30,60,0.45); }
+.hud-left { position: absolute; left: 22px; bottom: 22px; }
+.speed { font-size: clamp(56px, 9vw, 104px); font-weight: 900; font-style: italic; line-height: 0.9; letter-spacing: -2px; }
+.speed small { font-size: 0.28em; font-weight: 700; margin-left: 8px; letter-spacing: 1px; opacity: 0.9; }
+.dist { margin-top: 6px; font-weight: 700; letter-spacing: 2px; opacity: 0.9; font-size: 18px; }
+.hud-right { position: absolute; right: 22px; top: 18px; text-align: right; }
+.score { font-size: clamp(34px, 5vw, 56px); font-weight: 900; font-style: italic; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.best { font-size: 14px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.85; }
+.combo { display: inline-block; margin-top: 10px; padding: 2px 16px 2px 12px; font-size: 34px; font-weight: 900; font-style: italic;
+  background: var(--accent); border-radius: 6px; transform: skewX(-8deg); text-shadow: none; box-shadow: 0 6px 24px rgba(255,90,31,0.5); }
+.bar { height: 5px; margin-top: 6px; background: rgba(255,255,255,0.35); border-radius: 3px; overflow: hidden; }
+#combobar { height: 100%; width: 100%; background: #fff; }
+.mute { position: absolute; left: 22px; top: 18px; font-size: 12px; letter-spacing: 1px; opacity: 0.7; }
+
+#popups { position: absolute; left: 0; right: 0; top: 30%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pop { font-size: clamp(22px, 4vw, 38px); font-weight: 900; font-style: italic; letter-spacing: 1px; white-space: nowrap;
+  animation: pop 1.5s ease-out forwards; }
+.pop.trick { color: #ffd23f; }
+.pop.air { color: var(--ice); }
+.pop.close { color: #fff; font-size: clamp(18px, 3vw, 28px); }
+.pop.bad { color: #ff7a7a; }
+@keyframes pop {
+  0% { transform: scale(0.5) translateY(14px); opacity: 0; }
+  12% { transform: scale(1.18) translateY(0); opacity: 1; }
+  25% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { transform: translateY(-40px) scale(1); opacity: 0; }
+}
+
+/* Screens */
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: radial-gradient(ellipse at center, rgba(8,20,40,0.25), rgba(8,20,40,0.6)); }
+.panel { width: min(560px, 100%); text-align: center; padding: 34px 30px 28px; border-radius: 22px;
+  background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 30px 80px rgba(0,10,30,0.45); }
+.eyebrow { font-size: 13px; letter-spacing: 4px; text-transform: uppercase; color: var(--ice); font-weight: 700; }
+h1 { font-size: clamp(54px, 11vw, 96px); font-weight: 900; font-style: italic; letter-spacing: -3px; line-height: 1; margin: 6px 0 4px; }
+h1 span { color: var(--accent); }
+.m-best { opacity: 0.85; margin-bottom: 20px; font-size: 15px; }
+.cta { cursor: pointer; border: 0; color: #fff; background: linear-gradient(180deg, #ff7a3f, var(--accent)); padding: 16px 44px;
+  font-size: 22px; font-weight: 900; font-style: italic; letter-spacing: 1px; border-radius: 12px; transform: skewX(-6deg);
+  box-shadow: 0 10px 30px rgba(255,90,31,0.5); transition: transform 0.12s, box-shadow 0.12s; font-family: inherit; }
+.cta:hover { transform: skewX(-6deg) translateY(-2px) scale(1.03); box-shadow: 0 14px 38px rgba(255,90,31,0.65); }
+.cta small { display: block; font-size: 11px; font-weight: 600; letter-spacing: 2px; opacity: 0.85; font-style: normal; }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin: 24px 0 14px; text-align: left; font-size: 13px; }
+.controls div { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+.controls b { font-size: 14px; color: #fff; }
+.controls span { opacity: 0.75; }
+.tip { font-size: 12.5px; opacity: 0.7; line-height: 1.5; }
+
+.final { font-size: clamp(60px, 12vw, 104px); font-weight: 900; font-style: italic; letter-spacing: -3px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.newbest { display: inline-block; margin: 2px 0 8px; padding: 4px 16px; background: #ffd23f; color: #3a2a00; font-weight: 900; font-style: italic;
+  border-radius: 6px; transform: skewX(-8deg); letter-spacing: 1px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 18px 0 24px; }
+.stats div { padding: 10px 4px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+.stats span { display: block; font-size: 18px; font-weight: 800; }
+.stats small { font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.7; }
+@media (max-width: 520px) { .stats { grid-template-columns: 1fr 1fr; } .controls { grid-template-columns: 1fr; } }
+
+/* Touch-Bedienung */
+#touchui { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; justify-content: center; gap: 14px;
+  padding: 0 16px calc(18px + env(safe-area-inset-bottom, 0px)); pointer-events: none; }
+.tbtn { pointer-events: auto; min-width: 118px; padding: 16px 14px; text-align: center; border-radius: 14px; font-weight: 900; font-style: italic;
+  letter-spacing: 1px; font-size: 17px; background: rgba(11,18,32,0.55); border: 2px solid rgba(255,255,255,0.35);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); touch-action: none; }
+.tbtn small { display: block; font-size: 9.5px; font-weight: 600; letter-spacing: 0.5px; font-style: normal; opacity: 0.75; margin-top: 2px; }
+.tbtn.jump { background: var(--accent); border-color: rgba(255,255,255,0.6); }
+.tbtn.on { background: rgba(111,211,255,0.55); }
+.screen { z-index: 10; }
+.touch-help, .touch-only { display: none; }
+body.touch .controls { display: none; }
+body.touch .touch-help { display: grid; gap: 8px; margin: 20px 0 14px; text-align: left; font-size: 13px; }
+body.touch .touch-help div { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+body.touch .touch-only { display: inline; }
+body.touch .hud-left { bottom: auto; top: 40px; }
+body.touch .speed { font-size: clamp(44px, 9vw, 72px); }
+body.touch .mute { display: none; }
+@media (max-height: 460px) {
+  .panel { padding: 16px 20px; max-height: 100%; overflow: auto; }
+  h1 { font-size: 48px; margin: 0; }
+  .m-best { margin-bottom: 8px; }
+  .cta { padding: 10px 34px; font-size: 18px; }
+  body.touch .touch-help { grid-template-columns: repeat(3, 1fr); margin: 10px 0 8px; font-size: 11px; }
+  .tip { display: none; }
+  .final { font-size: 52px; }
+  .stats { margin: 8px 0 12px; grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Ziele, Tore */
+.goals { margin: 14px 0 18px; text-align: left; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,0.08); }
+.goals h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.goals .gt { letter-spacing: 1px; }
+.goals ul { list-style: none; display: grid; gap: 4px; font-size: 14px; }
+.goals li::before { content: "\25CB"; margin-right: 8px; opacity: 0.7; }
+.goals li.done { color: #7dffb3; font-weight: 800; }
+.goals li.done::before { content: "\2713"; opacity: 1; }
+.pop.gate { color: #ff9d42; }
+@media (max-height: 460px) { .goals { margin: 8px 0; padding: 6px 12px; } .goals ul { font-size: 12px; } }
+
+/* Boost-Balken, 4 Touch-Buttons */
+.boostwrap { margin-top: 10px; width: min(190px, 40vw); font-size: 12px; font-weight: 800; letter-spacing: 2px; opacity: 0.9; }
+.boostwrap kbd { font-family: inherit; font-size: 10px; padding: 1px 6px; border: 1px solid rgba(255,255,255,0.6); border-radius: 4px; letter-spacing: 0; }
+.boostwrap .bar { height: 9px; border-radius: 5px; background: rgba(11,18,32,0.45); }
+#boostbar { width: 0; background: #6fd3ff; transition: width 0.12s; }
+.boostwrap.ready #boostbar { background: #ffd23f; }
+.boostwrap.ready { opacity: 1; }
+.boostwrap.active #boostbar { background: #ff5a1f; }
+.tbtn.boost { background: #1f8fd6; border-color: rgba(255,255,255,0.6); }
+.tbtn { min-width: 0; flex: 1 1 0; max-width: 150px; padding: 14px 6px; font-size: 15px; }
+.tbtn.on { background: rgba(255,210,63,0.6); }
+
+/* Feinschliff: Menü passt in jede Fensterhöhe, HUD skaliert mit der kleineren Bildschirmseite */
+.speed { font-size: clamp(38px, 8vmin, 84px); }
+.score { font-size: clamp(30px, 6vmin, 52px); }
+.panel { max-height: 100%; overflow: auto; padding: 22px 26px 20px; }
+h1 { font-size: clamp(44px, min(11vw, 13vh), 88px); }
+.m-best { margin-bottom: 10px; }
+.goals { margin: 10px 0 14px; }
+.controls { grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 16px 0 8px; }
+.controls div { padding: 6px 10px; }
+.controls b { font-size: 12.5px; }
+.controls span { font-size: 11.5px; }
+@media (max-width: 640px) { .controls { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 420px) { .controls { grid-template-columns: 1fr; } }
+
+/* Kurze Bildschirme (Handy quer): alles muss ohne Scrollen passen */
+@media (max-height: 460px) {
+  body.touch .touch-help, .tip, .touch-only { display: none !important; }
+  .panel { padding: 12px 18px; }
+  .eyebrow { font-size: 10px; letter-spacing: 3px; }
+  h1 { font-size: 42px; }
+  .final { font-size: 44px; letter-spacing: -2px; }
+  .newbest { margin: 0 0 4px; padding: 2px 12px; font-size: 13px; }
+  .stats { margin: 6px 0; gap: 6px; }
+  .stats div { padding: 5px 2px; }
+  .stats span { font-size: 15px; }
+  .stats small { font-size: 9px; }
+  .goals { margin: 6px 0 8px; padding: 6px 12px; }
+  .goals h3 { margin-bottom: 3px; }
+  .goals ul { gap: 1px; font-size: 12px; }
+  .cta { padding: 8px 30px; font-size: 17px; }
+}
+
+/* Zusatz-Styles für den Slalom-Modus */
+.sl-top { position: absolute; left: 0; right: 0; top: 14px; display: flex; flex-direction: column; align-items: center; }
+.sl-time { font-size: clamp(44px, 7vw, 76px); font-weight: 900; font-style: italic; letter-spacing: -1px; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.sl-pen { min-height: 22px; margin-top: 2px; font-size: 18px; font-weight: 800; font-style: italic; color: #ff8c8c; font-variant-numeric: tabular-nums; }
+.sl-pen.flash { animation: penflash 0.6s ease-out; }
+@keyframes penflash { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
+.sl-progress { position: relative; width: min(420px, 60vw); margin-top: 8px; height: 14px; }
+.sl-track { position: absolute; left: 0; right: 0; top: 5px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.3); overflow: hidden; }
+#sl-fill { height: 100%; width: 0; background: #fff; }
+.sl-dots { position: absolute; inset: 0; }
+.sl-dots i { position: absolute; top: 3px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: rgba(255,255,255,0.55);
+  box-shadow: 0 1px 4px rgba(0,20,50,0.5); }
+.sl-dots i.hit { background: #56e39a; }
+.sl-dots i.miss { background: #ff5a5a; }
+.sl-dots i.sec { top: 1px; width: 4px; height: 12px; margin-left: -2px; border-radius: 2px; background: rgba(255,255,255,0.9); }
+.sl-split { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-weight: 900; font-style: italic;
+  font-size: clamp(26px, 4.6vw, 48px); animation: pop 2.4s ease-out forwards; }
+.sl-split small { display: block; font-size: 0.42em; letter-spacing: 3px; text-transform: uppercase; opacity: 0.85; }
+.sl-split.fast { color: #56e39a; }
+.sl-split.slow { color: #ff8c8c; }
+.sl-count { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(90px, 20vw, 220px); font-weight: 900;
+  font-style: italic; line-height: 1; text-shadow: 0 6px 40px rgba(0,30,70,0.55); animation: count 1s ease-out infinite; }
+.sl-count.go { color: #56e39a; }
+@keyframes count { 0% { transform: scale(1.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: scale(0.95); opacity: 0.9; } }
+.pop.gate { color: #56e39a; }
+.pop.pen { color: #ff8c8c; }
+
+.sl-sections { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 22px; }
+.sl-sections div { padding: 8px 4px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+.sl-sections b { display: block; font-size: 22px; font-weight: 900; font-style: italic; color: var(--accent); }
+.sl-sections span { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.8; }
+.tip a { color: var(--ice); text-decoration: none; font-weight: 700; pointer-events: auto; }
+
+.sl-rows { margin: 12px auto 4px; max-width: 360px; text-align: left; }
+.sl-rows div { display: flex; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,0.12); font-size: 15px; }
+.sl-rows span { opacity: 0.8; }
+.sl-rows b { font-variant-numeric: tabular-nums; }
+.sl-rows .total { border-bottom: 0; font-size: 18px; font-weight: 900; }
+.sl-rows .total span { opacity: 1; }
+#o-medal.gold { color: #ffd23f; }
+#o-medal.silver { color: #dfe6ee; }
+#o-medal.bronze { color: #e0955a; }
+
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vignette"></div>
+
+<div id="hud" class="hidden">
+  <div class="sl-top">
+    <div class="sl-time" id="sl-time">0.00</div>
+    <div class="sl-pen" id="sl-pen"></div>
+    <div class="sl-progress" id="sl-progress"><div class="sl-track"><div id="sl-fill"></div></div><div class="sl-dots" id="sl-dots"></div></div>
+  </div>
+  <div class="hud-left">
+    <div class="speed"><span id="speed">0</span><small>km/h</small></div>
+    <div class="dist" id="dist">Tor 0 / 0</div>
+    <div id="boostwrap" class="boostwrap"><span>BOOST <kbd>E</kbd></span><div class="bar"><div id="boostbar"></div></div></div>
+  </div>
+  <div class="hud-right">
+    <div class="score" id="score">0</div>
+    <div class="best" id="best"></div>
+    <div id="combowrap" class="hidden"><div id="combo" class="combo">x1.0</div><div class="bar"><div id="combobar"></div></div></div>
+  </div>
+  <div class="sl-split hidden" id="sl-split"></div>
+  <div id="popups"></div>
+  <div class="mute" id="mute">Ton an (M) · Neustart (R)</div>
+  <div class="sl-count hidden" id="sl-count">3</div>
+</div>
+
+<div id="touchui" class="hidden">
+  <div class="tbtn" id="b-tuck" data-btn="tuck">DUCKEN<small>Luft: Salto</small></div>
+  <div class="tbtn" id="b-grab" data-btn="grab">GRAB<small>in der Luft</small></div>
+  <div class="tbtn boost" data-btn="boost">BOOST</div>
+  <div class="tbtn jump" data-btn="jump">SPRUNG</div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="eyebrow">Zeitrennen · Slalom-Parkour</div>
+    <h1>SLA<span>LOM</span></h1>
+    <p class="m-best" id="m-best"></p>
+    <div class="sl-sections">
+      <div><b>A</b><span>Slalom</span></div>
+      <div><b>B</b><span>Parkour</span></div>
+      <div><b>C</b><span>Riesen</span></div>
+      <div><b>D</b><span>Finale</span></div>
+    </div>
+    <button id="start" class="cta">Rennen starten <small>Leertaste</small></button>
+    <div class="controls">
+      <div><b>← → · A D</b><span>Carven, in der Luft: Drehung</span></div>
+      <div><b>↓ · S</b><span>Ducken = schneller</span></div>
+      <div><b>Leertaste</b><span>Sprung</span></div>
+      <div><b>↑ ↓ in der Luft</b><span>Salto</span></div>
+      <div><b>G halten in der Luft</b><span>Grab-Trick</span></div>
+      <div><b>E · Shift · R</b><span>Boost · Bremsen · Neustart</span></div>
+    </div>
+    <p class="tip">Fahr durch alle Tore zwischen den Stangen. Ein verpasstes Tor kostet <b>+2 s</b>, ein Sturz <b>+3 s</b>. Tricks auf den Schanzen und knappe Tore geben Punkte, Zeit gibt den Bonus.<span class="touch-only"><br>Am Handy am besten quer halten.</span></p>
+    <p class="tip"><a href="index.html">Zum Endlos-Modus →</a></p>
+  </div>
+</div>
+
+<div id="over" class="screen hidden">
+  <div class="panel">
+    <div class="eyebrow" id="o-medal">Im Ziel</div>
+    <div class="final" id="o-time">0.00</div>
+    <div id="o-new" class="newbest hidden">Neue Bestzeit!</div>
+    <div class="sl-rows">
+      <div><span>Fahrzeit</span><b id="o-raw">0.00</b></div>
+      <div><span>Strafsekunden</span><b id="o-pen">+0.00</b></div>
+      <div><span>Tore</span><b id="o-gates">0 / 0</b></div>
+      <div><span>Punkte</span><b id="o-points">0</b></div>
+      <div><span>Zeitbonus</span><b id="o-bonus">0</b></div>
+      <div class="total"><span>Gesamtpunkte</span><b id="o-score">0</b></div>
+    </div>
+    <div class="stats">
+      <div><span id="o-btime">–</span><small>Bestzeit</small></div>
+      <div><span id="o-bscore">0</span><small>Bestpunkte</small></div>
+      <div><span id="o-speed">0</span><small>Top-Tempo</small></div>
+      <div><span id="o-trick">0</span><small>Bester Trick</small></div>
+    </div>
+    <button id="retry" class="cta">Nochmal <small>Leertaste / R</small></button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const THREE = window.THREE;
+// Reine Mathematik für das Gelände (ohne Three.js, damit testbar).
+// Koordinaten: Es geht in -Z bergab. +X ist rechts.
+
+const SLOPE = 0.3; // Höhenverlust pro Meter Strecke
+const PISTE_HALF = 22; // halbe Pistenbreite
+const CELL = 110; // Länge einer Sprungschanzen-Zelle
+const KICKER_LEN = 9;
+const KICKER_H = 2.1;
+
+function hash(n) {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+function smoothstep(a, b, x) {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+function centerX(z) {
+  return Math.sin(z * 0.008) * 38 + Math.sin(z * 0.019 + 1.3) * 16;
+}
+
+function noise(x, z) {
+  return (
+    Math.sin(x * 0.05 + z * 0.031) * 2.2 +
+    Math.sin(x * 0.11 - z * 0.07) * 1.0 +
+    Math.sin(x * 0.23 + z * 0.19) * 0.35
+  );
+}
+
+// Schanzen-Typen: klein, mittel, groß
+const KTYPES = [
+  { type: 0, len: 8, h: 1.7, w: 6.5 },
+  { type: 1, len: 11, h: 2.8, w: 8.5 },
+  { type: 2, len: 15, h: 4.6, w: 11 },
+];
+const EMPTY = [];
+const kCache = new Map();
+
+function kickersForCell(k) {
+  if (k < 1) return EMPTY;
+  const hit = kCache.get(k);
+  if (hit) return hit;
+  let out = EMPTY;
+  const r = hash(k * 7.31);
+  if (r <= 0.62) {
+    const z0 = -(k * CELL + 30 + hash(k * 3.7) * 50);
+    const x0 = centerX(z0) + (hash(k * 5.1) - 0.5) * 22;
+    const diff = Math.min(1, k / 30);
+    const t = hash(k * 9.9);
+    const ti = t < 0.5 - 0.2 * diff ? 0 : t < 0.85 - 0.1 * diff ? 1 : 2;
+    if (r < 0.07) {
+      // Jump-Line: drei Schanzen hintereinander, jede etwas größer
+      out = [0, 1, 2].map((i) => {
+        const zz = z0 - i * 46;
+        const kt = KTYPES[Math.min(2, i)];
+        return { ...kt, z0: zz, x0: centerX(zz) + (hash(k * 2.3 + i) - 0.5) * 6 };
+      });
+    } else {
+      out = [{ ...KTYPES[ti], z0, x0 }];
+    }
+  }
+  kCache.set(k, out);
+  return out;
+}
+
+function kickerForCell(k) {
+  const a = kickersForCell(k);
+  return a.length ? a[0] : null;
+}
+
+function kickerHeight(x, z) {
+  const kc = Math.floor(-z / CELL);
+  let h = 0;
+  for (let k = kc - 2; k <= kc + 1; k++) {
+    const list = kickersForCell(k);
+    for (let n = 0; n < list.length; n++) {
+      const kk = list[n];
+      const u = kk.z0 - z;
+      if (u < 0 || u > kk.len + 2.5) continue;
+      const wx = smoothstep(kk.w, kk.w * 0.45, Math.abs(x - kk.x0));
+      if (wx <= 0) continue;
+      const shape =
+        u <= kk.len ? kk.h * Math.pow(u / kk.len, 1.6) : kk.h * (1 - (u - kk.len) / 2.5);
+      h += shape * wx;
+    }
+  }
+  return h;
+}
+
+// Dreiecks-Indizes eines Gitters (nx+1) x (nz+1); Vorderseite zeigt nach oben (+Y),
+// wenn Zeilen in -Z-Richtung und Spalten in +X-Richtung laufen.
+function gridIndices(nx, nz) {
+  const nx1 = nx + 1;
+  const idx = [];
+  for (let j = 0; j < nz; j++) {
+    for (let i = 0; i < nx; i++) {
+      const a = j * nx1 + i;
+      const b = a + 1;
+      const c = a + nx1;
+      const d = c + 1;
+      idx.push(a, b, c, b, d, c);
+    }
+  }
+  return idx;
+}
+
+function heightAt(x, z) {
+  const d = Math.abs(x - centerX(z));
+  const off = smoothstep(PISTE_HALF, PISTE_HALF + 16, d);
+  const bank = Math.max(0, d - PISTE_HALF);
+  let h = SLOPE * z;
+  h += noise(x, z) * (0.12 + off * 1.3);
+  h += Math.min(110, bank * bank * 0.012 + bank * 0.1);
+  h += kickerHeight(x, z);
+  return h;
+}
+
+function gradientAt(x, z, e = 0.4) {
+  return {
+    x: (heightAt(x + e, z) - heightAt(x - e, z)) / (2 * e),
+    z: (heightAt(x, z + e) - heightAt(x, z - e)) / (2 * e),
+  };
+}
+
+function normalAt(x, z) {
+  const g = gradientAt(x, z);
+  const l = Math.hypot(g.x, 1, g.z);
+  return { x: -g.x / l, y: 1 / l, z: -g.z / l };
+}
+
+// ---- Hindernisse (deterministisch pro Rasterzelle) ----
+const OB = 8; // Rasterweite
+
+function obstaclesInRange(zA, zB) {
+  // zA > zB (zA ist weiter oben am Berg)
+  const out = [];
+  const i0 = Math.floor(zB / OB);
+  const i1 = Math.floor(zA / OB);
+  for (let iz = i0; iz <= i1; iz++) {
+    const zc = iz * OB;
+    if (zc > -70) continue; // freie Startzone
+    const cx = centerX(zc);
+    const diff = Math.min(1, -zc / 3000); // wird schwerer
+    for (let ix = -16; ix <= 16; ix++) {
+      const id = iz * 1000 + ix;
+      const r = hash(id * 1.37);
+      const x = cx + ix * OB + (hash(id * 2.11) - 0.5) * (OB * 0.9);
+      const z = zc + (hash(id * 3.17) - 0.5) * (OB * 0.9);
+      const d = Math.abs(x - cx);
+      let type = null;
+      if (d > PISTE_HALF + 7) {
+        const dens = 0.2 + 0.2 * Math.min(1, (d - PISTE_HALF) / 40);
+        if (r < dens) type = 'tree';
+        else if (r > 0.97) type = 'rock';
+      } else if (d > 4) {
+        const p = 0.012 + 0.03 * diff;
+        if (r < p) type = 'rock';
+        else if (r > 1 - p * 0.7) type = 'tree';
+      }
+      if (!type) continue;
+      // nicht auf Schanzen
+      if (kickerHeight(x, z) > 0.01) continue;
+      const s = 0.8 + hash(id * 4.7) * (type === 'tree' ? 1.1 : 0.9);
+      out.push({ id, type, x, z, y: heightAt(x, z), s, r: (type === 'tree' ? 0.75 : 0.95) * s });
+    }
+  }
+  return out;
+}
+
+// ---- Boost-Tore (Ringe) ----
+const GATE_CELL = 140;
+const GATE_R = 3.4;
+
+function gateForCell(k) {
+  if (k < 1) return null;
+  const z = -(k * GATE_CELL + 50 + hash(k * 11.3) * 60);
+  const x = centerX(z) + (hash(k * 6.7) - 0.5) * 26;
+  return { id: k, x, z, y: heightAt(x, z) + 2.1, r: GATE_R };
+}
+
+function gatesInRange(zA, zB) {
+  const out = [];
+  const k0 = Math.max(1, Math.floor(-zA / GATE_CELL) - 1);
+  const k1 = Math.floor(-zB / GATE_CELL) + 1;
+  for (let k = k0; k <= k1; k++) {
+    const g = gateForCell(k);
+    if (g && g.z <= zA && g.z > zB) out.push(g);
+  }
+  return out;
+}
+
+// Physik des Skifahrers – komplett ohne Rendering, damit sie testbar bleibt.
+
+
+const G = 24;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const TWO_PI = Math.PI * 2;
+
+class SkierSim {
+  // terrain: optional { heightAt, gradientAt, normalAt } (Standard: endloses Gelände)
+  constructor(terrain) {
+    this.terrain = terrain || { heightAt, gradientAt, normalAt };
+    this.reset();
+  }
+
+  reset(x0 = 0, z0 = 0) {
+    this.x = x0;
+    this.z = z0;
+    this.y = this.terrain.heightAt(x0, z0);
+    this.vx = 0;
+    this.vz = -6;
+    this.vy = 0;
+    this.heading = 0;
+    this.grounded = true;
+    this.crashed = false;
+    this.crashTime = 0;
+    this.airTime = 0;
+    this.spin = 0; // gesamte Drehung in Luft (rad)
+    this.flip = 0;
+    this.carve = 0; // 0..1 Stärke des Carvings (für Partikel/Sound)
+    this.lean = 0; // geglättete Neigung für die Optik
+    this.events = []; // werden pro Frame vom Spiel abgeholt
+    this.maxSpeed = 0;
+    this.boostT = 0; // Restzeit des Boosts in s
+    this.grabTime = 0;
+    this.grabbing = false;
+  }
+
+  get speed() {
+    return Math.hypot(this.vx, this.vz);
+  }
+
+  update(dt, inp) {
+    if (this.crashed) {
+      this.crashTime += dt;
+      this.vx *= Math.exp(-2.2 * dt);
+      this.vz *= Math.exp(-2.2 * dt);
+      this.x += this.vx * dt;
+      this.z += this.vz * dt;
+      this.y = Math.max(this.y - 0, this.terrain.heightAt(this.x, this.z));
+      return;
+    }
+    if (this.boostT > 0) {
+      this.boostT -= dt;
+      this.boost(30 * dt, 95);
+    }
+    if (this.grounded) this.stepGround(dt, inp);
+    else this.stepAir(dt, inp);
+    this.maxSpeed = Math.max(this.maxSpeed, this.speed);
+  }
+
+  stepGround(dt, inp) {
+    const sp = this.speed;
+    const turnRate = 2.6 - 1.5 * clamp(sp / 50, 0, 1);
+    this.heading = clamp(this.heading + inp.steer * turnRate * dt, -1.4, 1.4);
+
+    const g = this.terrain.gradientAt(this.x, this.z);
+    const k = G / (1 + g.x * g.x + g.z * g.z);
+    this.vx += -g.x * k * dt;
+    this.vz += -g.z * k * dt;
+
+    const fx = Math.sin(this.heading);
+    const fz = -Math.cos(this.heading);
+    const lx = Math.cos(this.heading);
+    const lz = Math.sin(this.heading);
+    let vLat = this.vx * lx + this.vz * lz;
+    let vFwd = this.vx * fx + this.vz * fz;
+
+    const grip = inp.brake ? 3.2 : 5.5;
+    const lost = vLat * (1 - Math.exp(-grip * dt));
+    vLat -= lost;
+    // Carven kostet etwas Tempo
+    vFwd -= Math.abs(lost) * 0.18;
+
+    const drag = inp.tuck ? 0.0028 : 0.0072;
+    vFwd -= (drag * vFwd * Math.abs(vFwd) + 0.03 * vFwd) * dt;
+    if (inp.brake && vFwd > 0) vFwd -= 14 * dt;
+    if (vFwd < 0) vFwd = Math.max(vFwd, -2);
+
+    this.vx = fx * vFwd + lx * vLat;
+    this.vz = fz * vFwd + lz * vLat;
+    this.carve = clamp(Math.abs(lost) / (Math.abs(lost) + 4) * 2.2 + (inp.brake ? 0.3 : 0), 0, 1) * clamp(sp / 8, 0, 1);
+
+    const nx = this.x + this.vx * dt;
+    const nz = this.z + this.vz * dt;
+    const gNew = this.terrain.heightAt(nx, nz);
+    const vyBall = this.vy - G * dt;
+    const yBall = this.y + vyBall * dt;
+    if (inp.jump && inp.jumpPressed) {
+      this.vy = Math.max(this.vy, 0) + 9;
+      this.takeOff(nx, nz, true);
+      return;
+    }
+    if (gNew < yBall - 0.03) {
+      this.vy = vyBall;
+      this.takeOff(nx, nz, false);
+      return;
+    }
+    this.vy = (gNew - this.y) / dt;
+    this.x = nx;
+    this.z = nz;
+    this.y = gNew;
+  }
+
+  takeOff(nx, nz, ollie) {
+    this.grounded = false;
+    this.airTime = 0;
+    this.spin = 0;
+    this.flip = 0;
+    this.grabTime = 0;
+    this.grabbing = false;
+    this.x = nx;
+    this.z = nz;
+    this.y += this.vy * (1 / 60);
+    this.events.push({ type: 'takeoff', ollie });
+  }
+
+  stepAir(dt, inp) {
+    this.airTime += dt;
+    this.spin += inp.steer * 7.0 * dt;
+    this.flip += (inp.flipAxis || 0) * 6.0 * dt;
+    this.grabbing = !!inp.grab;
+    if (this.grabbing) this.grabTime += dt;
+    this.vx *= 1 - 0.01 * dt;
+    this.vz *= 1 - 0.01 * dt;
+    this.vy -= G * dt;
+    this.x += this.vx * dt;
+    this.z += this.vz * dt;
+    this.y += this.vy * dt;
+    const gy = this.terrain.heightAt(this.x, this.z);
+    if (this.y <= gy) this.land(gy);
+  }
+
+  land(gy) {
+    const n = this.terrain.normalAt(this.x, this.z);
+    const impact = -(this.vx * n.x + this.vy * n.y + this.vz * n.z);
+    const a = Math.abs(this.spin) % Math.PI;
+    const spinErr = Math.min(a, Math.PI - a);
+    const f = Math.abs(this.flip) % TWO_PI;
+    const flipErr = Math.min(f, TWO_PI - f);
+    this.y = gy;
+    const spins = Math.round(Math.abs(this.spin) / Math.PI); // 180°-Schritte
+    const flips = Math.round(Math.abs(this.flip) / TWO_PI);
+    const bad = spinErr > 0.85 || flipErr > 0.85 || impact > 30;
+    if (bad && this.airTime > 0.15) {
+      this.events.push({ type: 'bail', airTime: this.airTime });
+      this.crash('Bruchlandung');
+      return;
+    }
+    this.grounded = true;
+    // Geschwindigkeit an Hang anpassen, Heading neu ausrichten
+    const sp = this.speed;
+    this.heading = clamp(Math.atan2(this.vx, -this.vz), -1.4, 1.4);
+    this.vy = 0;
+    this.vx *= 0.97;
+    this.vz *= 0.97;
+    if (sp < 1) this.heading = 0;
+    this.events.push({
+      type: 'land',
+      airTime: this.airTime,
+      spins,
+      flips,
+      clean: spinErr < 0.45 && flipErr < 0.45,
+      grab: this.grabTime,
+      impact,
+    });
+    this.spin = 0;
+    this.flip = 0;
+    this.grabbing = false;
+  }
+
+  crash(reason) {
+    if (this.crashed) return;
+    this.crashed = true;
+    this.crashTime = 0;
+    this.reason = reason;
+    this.events.push({ type: 'crash', reason });
+  }
+
+  // Tempo-Schub entlang der aktuellen Fahrtrichtung (Boost-Tore)
+  boost(dv, cap = 85) {
+    const sp = this.speed;
+    if (sp < 0.5) return;
+    const target = Math.min(cap, sp + dv);
+    const f = target / sp;
+    this.vx *= f;
+    this.vz *= f;
+  }
+
+  drainEvents() {
+    const e = this.events;
+    this.events = [];
+    return e;
+  }
+}
+
+// Prozeduraler Sound (Web Audio) – keine Dateien nötig.
+class GameAudio {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  init() {
+    if (this.ctx) return this.resume();
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+    } catch (e) {
+      return;
+    }
+    const ctx = this.ctx;
+    const len = ctx.sampleRate * 2;
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    this.noise = buf;
+    this.master = ctx.createGain();
+    this.master.gain.value = 0.8;
+    this.master.connect(ctx.destination);
+
+    const loop = (type, freq, q) => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      src.connect(f);
+      f.connect(g);
+      g.connect(this.master);
+      src.start();
+      return { f, g };
+    };
+    this.wind = loop('bandpass', 500, 0.6);
+    this.carve = loop('bandpass', 2600, 1.1);
+  }
+
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.master) this.master.gain.value = this.muted ? 0 : 0.8;
+    return this.muted;
+  }
+
+  update(speed, carve, grounded, active) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const s = Math.min(1, speed / 60);
+    this.wind.g.gain.setTargetAtTime(active ? 0.05 + s * 0.4 : 0, t, 0.12);
+    this.wind.f.frequency.setTargetAtTime(350 + s * 1700, t, 0.12);
+    this.carve.g.gain.setTargetAtTime(active && grounded ? carve * s * 0.35 : 0, t, 0.06);
+    this.carve.f.frequency.setTargetAtTime(2000 + s * 2500, t, 0.1);
+  }
+
+  burst(freq, dur, gain, type = 'lowpass') {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    src.connect(f);
+    f.connect(g);
+    g.connect(this.master);
+    src.start(0, Math.random());
+    src.stop(ctx.currentTime + dur + 0.05);
+  }
+
+  tone(freq, dur, gain, type = 'sine', slide = 0) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, ctx.currentTime + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.connect(g);
+    g.connect(this.master);
+    o.start();
+    o.stop(ctx.currentTime + dur + 0.05);
+  }
+
+  land(power) {
+    this.burst(500 + power * 40, 0.25, Math.min(0.9, 0.2 + power * 0.04));
+  }
+  jump() {
+    this.burst(1800, 0.12, 0.15, 'highpass');
+  }
+  crash() {
+    this.burst(260, 0.7, 0.9);
+    this.tone(120, 0.5, 0.35, 'sawtooth', 0.4);
+  }
+  trick(level) {
+    const base = 520 + level * 90;
+    this.tone(base, 0.18, 0.18, 'triangle');
+    setTimeout(() => this.tone(base * 1.5, 0.28, 0.18, 'triangle'), 90);
+  }
+  close() {
+    this.tone(900, 0.12, 0.12, 'square', 1.6);
+  }
+  gate(level) {
+    const b = 600 + Math.min(6, level) * 70;
+    this.tone(b, 0.12, 0.2, 'sawtooth', 1.5);
+    setTimeout(() => this.tone(b * 2, 0.3, 0.16, 'triangle'), 70);
+    this.burst(2400, 0.25, 0.12, 'highpass');
+  }
+  boost() {
+    this.tone(180, 0.6, 0.25, 'sawtooth', 3.5);
+    this.burst(900, 0.6, 0.35, 'bandpass');
+  }
+  huge() {
+    this.tone(440, 0.2, 0.2, 'triangle');
+    setTimeout(() => this.tone(660, 0.2, 0.2, 'triangle'), 100);
+    setTimeout(() => this.tone(880, 0.4, 0.22, 'triangle'), 200);
+  }
+  start() {
+    this.tone(330, 0.15, 0.2, 'triangle');
+    setTimeout(() => this.tone(660, 0.25, 0.2, 'triangle'), 110);
+  }
+}
+
+// Partikel: Schneespray und Schneefall.
+
+// Weicher runder Punkt, damit Schnee als Flocken statt als Quadrate erscheint
+function makeSprite() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.85)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+const SPRITE = makeSprite();
+
+class Spray {
+  constructor(scene, max = 900) {
+    this.max = max;
+    this.pos = new Float32Array(max * 3);
+    this.vel = new Float32Array(max * 3);
+    this.life = new Float32Array(max);
+    this.next = 0;
+    for (let i = 0; i < max; i++) this.pos[i * 3 + 1] = -9999;
+    const geo = new THREE.BufferGeometry();
+    this.attr = new THREE.BufferAttribute(this.pos, 3);
+    this.attr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('position', this.attr);
+    const mat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.5,
+      map: SPRITE,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    this.points = new THREE.Points(geo, mat);
+    this.points.frustumCulled = false;
+    scene.add(this.points);
+  }
+
+  emit(x, y, z, vx, vy, vz, spread, n) {
+    for (let k = 0; k < n; k++) {
+      const i = this.next;
+      this.next = (this.next + 1) % this.max;
+      const p = i * 3;
+      this.pos[p] = x + (Math.random() - 0.5) * 0.4;
+      this.pos[p + 1] = y + Math.random() * 0.2;
+      this.pos[p + 2] = z + (Math.random() - 0.5) * 0.4;
+      this.vel[p] = vx + (Math.random() - 0.5) * spread;
+      this.vel[p + 1] = vy + Math.random() * spread * 0.8;
+      this.vel[p + 2] = vz + (Math.random() - 0.5) * spread;
+      this.life[i] = 0.5 + Math.random() * 0.6;
+    }
+  }
+
+  update(dt) {
+    for (let i = 0; i < this.max; i++) {
+      if (this.life[i] <= 0) continue;
+      this.life[i] -= dt;
+      const p = i * 3;
+      if (this.life[i] <= 0) {
+        this.pos[p + 1] = -9999;
+        continue;
+      }
+      this.vel[p + 1] -= 10 * dt;
+      const drag = Math.exp(-1.5 * dt);
+      this.vel[p] *= drag;
+      this.vel[p + 2] *= drag;
+      this.pos[p] += this.vel[p] * dt;
+      this.pos[p + 1] += this.vel[p + 1] * dt;
+      this.pos[p + 2] += this.vel[p + 2] * dt;
+    }
+    this.attr.needsUpdate = true;
+  }
+}
+
+class Snowfall {
+  constructor(scene, n = 1400) {
+    this.n = n;
+    this.pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      this.pos[i * 3] = (Math.random() - 0.5) * 80;
+      this.pos[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      this.pos[i * 3 + 2] = (Math.random() - 0.5) * 80;
+    }
+    this.rel = new Float32Array(this.pos);
+    const geo = new THREE.BufferGeometry();
+    this.attr = new THREE.BufferAttribute(this.pos, 3);
+    this.attr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('position', this.attr);
+    const mat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.2,
+      map: SPRITE,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    this.points = new THREE.Points(geo, mat);
+    this.points.frustumCulled = false;
+    scene.add(this.points);
+  }
+
+  update(dt, cam, time) {
+    const r = this.rel;
+    for (let i = 0; i < this.n; i++) {
+      const p = i * 3;
+      r[p + 1] -= (2.2 + (i % 5) * 0.4) * dt;
+      r[p] += Math.sin(time * 0.7 + i) * 0.4 * dt;
+      if (r[p + 1] < -20) r[p + 1] += 40;
+      this.pos[p] = cam.x + r[p];
+      this.pos[p + 1] = cam.y + r[p + 1];
+      this.pos[p + 2] = cam.z + r[p + 2];
+    }
+    this.attr.needsUpdate = true;
+  }
+}
+
+// Skispuren im Schnee: zwei Bänder hinter dem Skifahrer
+class Trail {
+  constructor(scene, n = 160) {
+    this.n = n;
+    this.pts = []; // {x,y,z,lx,lz,gap}
+    this.pos = new Float32Array(n * 4 * 3);
+    this.idxArr = new Uint16Array(n * 12);
+    const geo = new THREE.BufferGeometry();
+    this.attr = new THREE.BufferAttribute(this.pos, 3);
+    this.attr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('position', this.attr);
+    this.index = new THREE.BufferAttribute(this.idxArr, 1);
+    this.index.setUsage(THREE.DynamicDrawUsage);
+    geo.setIndex(this.index);
+    geo.setDrawRange(0, 0);
+    this.geo = geo;
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x9fb4cf,
+      transparent: true,
+      opacity: 0.4,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -4,
+      side: THREE.DoubleSide,
+      fog: true,
+    });
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 1;
+    scene.add(this.mesh);
+    this.pendingGap = true;
+  }
+
+  clear() {
+    this.pts.length = 0;
+    this.pendingGap = true;
+    this.geo.setDrawRange(0, 0);
+  }
+
+  // Aufruf pro Frame; grounded steuert, ob eine Spur gelegt wird
+  add(x, y, z, heading, grounded) {
+    if (!grounded) {
+      this.pendingGap = true;
+      return;
+    }
+    const last = this.pts[this.pts.length - 1];
+    if (last && !this.pendingGap) {
+      const dx = x - last.x;
+      const dz = z - last.z;
+      if (dx * dx + dz * dz < 0.5) return;
+    }
+    this.pts.push({ x, y, z, lx: Math.cos(heading), lz: Math.sin(heading), gap: this.pendingGap });
+    this.pendingGap = false;
+    if (this.pts.length > this.n) this.pts.shift();
+    this.rebuild();
+  }
+
+  rebuild() {
+    const P = this.pts;
+    const pos = this.pos;
+    const W = 0.035;
+    const OFF = 0.2;
+    for (let i = 0; i < P.length; i++) {
+      const p = P[i];
+      const y = p.y + 0.09;
+      let o = i * 12;
+      const sides = [-OFF - W, -OFF + W, OFF - W, OFF + W];
+      for (let k = 0; k < 4; k++) {
+        pos[o++] = p.x + p.lx * sides[k];
+        pos[o++] = y;
+        pos[o++] = p.z + p.lz * sides[k];
+      }
+    }
+    const idx = this.idxArr;
+    let c = 0;
+    for (let i = 1; i < P.length; i++) {
+      if (P[i].gap) continue;
+      for (const r of [0, 2]) {
+        const a = (i - 1) * 4 + r;
+        const b = i * 4 + r;
+        idx[c++] = a; idx[c++] = a + 1; idx[c++] = b;
+        idx[c++] = a + 1; idx[c++] = b + 1; idx[c++] = b;
+      }
+    }
+    this.geo.setDrawRange(0, c);
+    this.attr.needsUpdate = true;
+    this.index.needsUpdate = true;
+  }
+}
+
+// Low-Poly-Skifahrer aus einfachen Formen.
+
+const col = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+const mat = (hex, rough = 0.6, metal = 0) =>
+  new THREE.MeshStandardMaterial({ color: col(hex), roughness: rough, metalness: metal });
+
+function box(w, h, d, m, x = 0, y = 0, z = 0) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  return mesh;
+}
+
+function createSkier() {
+  const root = new THREE.Group();
+  const rig = new THREE.Group();
+  root.add(rig);
+
+  const jacket = mat(0xe8381f, 0.55);
+  const pants = mat(0x1c2433, 0.7);
+  const helmetM = mat(0xf5f7fa, 0.3);
+  const goggleM = mat(0x0b1220, 0.1, 0.6);
+  const skiM = mat(0x1b1f2a, 0.35, 0.2);
+  const accent = mat(0xffb020, 0.5);
+  const glove = mat(0x222831, 0.8);
+
+  // Skier
+  for (const s of [-0.2, 0.2]) {
+    rig.add(box(0.13, 0.05, 2.0, skiM, s, 0.03, 0));
+    const tip = box(0.13, 0.05, 0.4, skiM, s, 0.09, -1.12);
+    tip.rotation.x = 0.35;
+    rig.add(tip);
+    rig.add(box(0.05, 0.012, 1.3, accent, s, 0.062, 0.1));
+  }
+
+  const hips = new THREE.Group();
+  hips.position.set(0, 0.1, 0);
+  rig.add(hips);
+
+  const legL = box(0.17, 0.6, 0.2, pants, -0.2, 0.32, 0);
+  const legR = box(0.17, 0.6, 0.2, pants, 0.2, 0.32, 0);
+  hips.add(legL, legR);
+
+  const torsoPivot = new THREE.Group();
+  torsoPivot.position.set(0, 0.62, 0);
+  hips.add(torsoPivot);
+  torsoPivot.add(box(0.52, 0.62, 0.32, jacket, 0, 0.31, 0));
+  torsoPivot.add(box(0.54, 0.1, 0.34, accent, 0, 0.08, 0));
+
+  const head = new THREE.Group();
+  head.position.set(0, 0.8, -0.02);
+  torsoPivot.add(head);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.19, 14, 12), helmetM);
+  skull.castShadow = true;
+  head.add(skull);
+  head.add(box(0.31, 0.11, 0.1, goggleM, 0, 0.0, -0.15));
+
+  const arms = [];
+  for (const s of [-1, 1]) {
+    const arm = new THREE.Group();
+    arm.position.set(0.31 * s, 0.55, 0);
+    torsoPivot.add(arm);
+    arm.add(box(0.12, 0.5, 0.13, jacket, 0, -0.22, 0));
+    arm.add(box(0.13, 0.13, 0.14, glove, 0, -0.5, 0));
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 1.35, 5),
+      mat(0x9aa4b2, 0.3, 0.6)
+    );
+    pole.position.set(0, -0.7, 0.45);
+    pole.rotation.x = -0.6;
+    pole.castShadow = true;
+    arm.add(pole);
+    arms.push(arm);
+  }
+
+  return { root, rig, hips, torsoPivot, head, arms, legs: [legL, legR], tuck: 0 };
+}
+
+// Slalom-Strecke: reine Mathematik ohne Three.js (damit testbar).
+// Koordinaten: bergab geht es in -Z, +X ist rechts. Die Strecke ist endlich:
+// Start bei z = 0, Ziellinie bei z = -FINISH_T. Links und rechts der Piste steht ein
+// Fangzaun, dahinter steigt ein durchgehender Berghang an (kein Blick durch Berge).
+
+const COURSE_LEN = 1500; // Länge des gebauten Geländes
+const FINISH_T = 1470; // Ziellinie (Strecke in Metern ab Start)
+const COURSE_HALF = 20; // halbe Pistenbreite
+const FENCE_U = 22.5; // Abstand des Fangzauns von der Pistenmitte
+const POLE_H = 2.7;
+const MISS_PENALTY = 2; // Strafsekunden pro verpasstem Tor
+const CRASH_PENALTY = 3; // Strafsekunden pro Sturz
+const PAR_TIME = 80; // darunter gibt es Zeitbonus-Punkte
+
+const cSstep = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+function centerOfCourse(z) {
+  const t = -z;
+  const amp = cSstep(0, 120, t) * (1 - cSstep(FINISH_T - 220, FINISH_T - 60, t));
+  return (Math.sin(z * 0.0062) * 24 + Math.sin(z * 0.0151 + 1.1) * 8) * amp;
+}
+
+// ---------- Tore & Schanzen (feste, handgebaute Strecke) ----------
+const COURSE_KTYPES = {
+  small: { len: 8, h: 1.7, w: 6.5 },
+  medium: { len: 11, h: 2.8, w: 8.5 },
+  large: { len: 15, h: 4.6, w: 11 },
+};
+
+function buildCourse() {
+  const gates = [];
+  const kickers = [];
+  const gate = (t, off, w, sec) => {
+    const z = -t;
+    gates.push({ id: gates.length, t, z, x: centerOfCourse(z) + off, w, sec });
+  };
+  const kicker = (t, off, type) => {
+    const z0 = -t;
+    kickers.push({ ...COURSE_KTYPES[type], type, t, z0, x0: centerOfCourse(z0) + off });
+  };
+
+  // A: klassischer Slalom (12 Tore)
+  for (let i = 0; i < 12; i++) gate(70 + i * 40, (i % 2 ? 1 : -1) * 8.5, 8.2, 'A');
+  // B: Parkour-Abschnitt – Tore mit Schanzen dazwischen
+  gate(560, 0, 14, 'B');
+  kicker(603, -2.5, 'medium');
+  gate(650, -5, 13, 'B');
+  kicker(693, -1, 'small');
+  gate(740, 3, 13, 'B');
+  kicker(783, 1.5, 'large');
+  gate(840, 0, 14, 'B');
+  // C: schneller Riesenslalom (8 Tore, weit)
+  for (let i = 0; i < 8; i++) gate(910 + i * 50, (i % 2 ? 1 : -1) * 9.5, 11.5, 'C');
+  // D: enger Finale-Slalom (6 Tore) + Zielsprung
+  for (let i = 0; i < 6; i++) gate(1290 + i * 25, (i % 2 ? 1 : -1) * 6, 7, 'D');
+  kicker(1432, 0, 'large');
+  return { gates, kickers };
+}
+
+const built = buildCourse();
+const GATES = built.gates;
+const KICKERS = built.kickers;
+const START = { x: 0, z: -6 };
+
+// Zwischenzeiten nach diesen Toren (Index)
+const SPLIT_GATES = [11, 15, 23];
+
+// ---------- Gelände ----------
+function cNoise(x, z) {
+  return (
+    Math.sin(x * 0.05 + z * 0.031) * 2.2 +
+    Math.sin(x * 0.11 - z * 0.07) * 1.0 +
+    Math.sin(x * 0.23 + z * 0.19) * 0.35
+  );
+}
+
+function cRidged(x, z) {
+  return (
+    (1 - Math.abs(Math.sin(x * 0.011 + z * 0.007))) * 34 +
+    (1 - Math.abs(Math.sin(x * 0.027 - z * 0.013 + 2))) * 14
+  );
+}
+
+function courseKickerHeight(x, z) {
+  let h = 0;
+  for (let n = 0; n < KICKERS.length; n++) {
+    const k = KICKERS[n];
+    const u = k.z0 - z;
+    if (u < 0 || u > k.len + 2.5) continue;
+    const dx = Math.abs(x - k.x0);
+    if (dx > k.w) continue;
+    const wx = cSstep(k.w, k.w * 0.45, dx);
+    const shape = u <= k.len ? k.h * Math.pow(u / k.len, 1.6) : k.h * (1 - (u - k.len) / 2.5);
+    h += shape * wx;
+  }
+  return h;
+}
+
+function courseHeight(x, z) {
+  const t = -z;
+  const d = Math.abs(x - centerOfCourse(z));
+  const e = Math.max(0, d - (FENCE_U + 0.8));
+  let h = 0.3 * z + 16 * Math.sin(z * 0.0042);
+  const outside = cSstep(COURSE_HALF, COURSE_HALF + 14, d);
+  h += cNoise(x, z) * (0.05 + outside * 0.9);
+  // durchgehender Berghang hinter dem Zaun
+  h += e < 10 ? 0.06 * e * e : 6 + 150 * Math.tanh((1.2 * (e - 10)) / 150);
+  h += cSstep(40, 220, e) * cRidged(x, z);
+  // Mauer hinter Start und hinter dem Ziel
+  h += cSstep(30, 170, z) * 70 + cSstep(FINISH_T + 40, FINISH_T + 220, t) * 140;
+  h += courseKickerHeight(x, z);
+  return h;
+}
+
+function courseGradient(x, z, e = 0.4) {
+  return {
+    x: (courseHeight(x + e, z) - courseHeight(x - e, z)) / (2 * e),
+    z: (courseHeight(x, z + e) - courseHeight(x, z - e)) / (2 * e),
+  };
+}
+
+function courseNormal(x, z) {
+  const g = courseGradient(x, z);
+  const l = Math.hypot(g.x, 1, g.z);
+  return { x: -g.x / l, y: 1 / l, z: -g.z / l };
+}
+
+const courseTerrain = { heightAt: courseHeight, gradientAt: courseGradient, normalAt: courseNormal };
+
+// ---------- Tore ----------
+// Prüft, ob die Bewegung (prev -> cur) die Torlinie quert, und wie.
+function gateCrossing(px, pz, cx, cz, g) {
+  if (!(pz > g.z && cz <= g.z)) return null;
+  const f = (pz - g.z) / (pz - cz || 1);
+  const xc = px + (cx - px) * f;
+  const half = g.w / 2;
+  const margin = half - Math.abs(xc - g.x);
+  return { x: xc, hit: margin >= 0, margin, perfect: margin >= 0 && margin < 1.6 };
+}
+
+// Seitenwand (Fangzaun): liefert die Korrektur, falls der Fahrer zu weit außen ist.
+function fenceCheck(x, z) {
+  const u = x - centerOfCourse(z);
+  const lim = FENCE_U - 0.3;
+  if (Math.abs(u) <= lim) return null;
+  const side = Math.sign(u);
+  return { side, x: centerOfCourse(z) + side * lim };
+}
+
+function medalFor(time) {
+  if (time <= 66) return 'Gold';
+  if (time <= 74) return 'Silber';
+  if (time <= 84) return 'Bronze';
+  return '';
+}
+
+function finalScore(points, time) {
+  return Math.round(points + Math.max(0, PAR_TIME - time) * 120);
+}
+
+function formatTime(t) {
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  return (m > 0 ? m + ':' : '') + (m > 0 && s < 10 ? '0' : '') + s.toFixed(2);
+}
+
+// 3D-Welt der Slalom-Strecke: Gelände, Fangzaun, Bäume, Tore, Start und Ziel.
+
+
+
+const SW_CHUNK = 100; // Länge eines Gelände-Streifens
+const SW_STEP_Z = 2;
+const SW_STEP_X = 3;
+const SW_HALFW = 240;
+const SW_Z_FROM = 80; // hinter dem Start
+const SW_Z_TO = -(FINISH_T + 260);
+const swLin = (v) => Math.pow(v, 2.2);
+const swMix = (a, b, t) => a + (b - a) * t;
+const swSmooth = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+const swHash = (n) => {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return s - Math.floor(s);
+};
+const swColor = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+function swPaint(g, fn) {
+  const p = g.attributes.position;
+  const c = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    const [r, gg, b] = fn(p.getY(i), p.getX(i), p.getZ(i));
+    c[i * 3] = swLin(r);
+    c[i * 3 + 1] = swLin(gg);
+    c[i * 3 + 2] = swLin(b);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g;
+}
+
+function swMerge(list) {
+  let vc = 0;
+  let ic = 0;
+  for (const g of list) {
+    vc += g.attributes.position.count;
+    ic += g.index.count;
+  }
+  const pos = new Float32Array(vc * 3);
+  const nor = new Float32Array(vc * 3);
+  const col = new Float32Array(vc * 3);
+  const idx = new Uint16Array(ic);
+  let vo = 0;
+  let io = 0;
+  for (const g of list) {
+    pos.set(g.attributes.position.array, vo * 3);
+    nor.set(g.attributes.normal.array, vo * 3);
+    col.set(g.attributes.color.array, vo * 3);
+    for (let i = 0; i < g.index.count; i++) idx[io + i] = g.index.array[i] + vo;
+    vo += g.attributes.position.count;
+    io += g.index.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  out.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  out.setIndex(new THREE.BufferAttribute(idx, 1));
+  return out;
+}
+
+function swCone(r, h, baseY) {
+  const g = new THREE.ConeGeometry(r, h, 7);
+  g.translate(0, baseY + h / 2, 0);
+  return swPaint(g, (y) => {
+    const t = (y - baseY) / h;
+    const snow = swSmooth(0.3, 0.9, t) * 0.8;
+    const dark = [0.06, 0.25, 0.18];
+    const lite = [0.92, 0.96, 1.0];
+    return [swMix(dark[0], lite[0], snow), swMix(dark[1], lite[1], snow), swMix(dark[2], lite[2], snow)];
+  });
+}
+
+function swTreeGeo() {
+  const trunk = new THREE.CylinderGeometry(0.22, 0.32, 1.3, 6);
+  trunk.translate(0, 0.65, 0);
+  swPaint(trunk, () => [0.33, 0.21, 0.12]);
+  return swMerge([trunk, swCone(2.1, 3.2, 1.0), swCone(1.55, 2.8, 2.9), swCone(1.0, 2.3, 4.6)]);
+}
+
+function swRockGeo() {
+  const g = new THREE.IcosahedronGeometry(1, 0);
+  g.translate(0, 0.35, 0);
+  const idx = [];
+  for (let i = 0; i < g.attributes.position.count; i++) idx.push(i);
+  g.setIndex(idx);
+  return swPaint(g, (y) => {
+    const t = Math.min(1, Math.max(0, (y + 0.7) / 2));
+    return [swMix(0.36, 0.62, t), swMix(0.38, 0.64, t), swMix(0.43, 0.7, t)];
+  });
+}
+
+function swTextTexture(text, bg, fg, w = 512, h = 96, checker = false) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, w, h);
+  if (checker) {
+    const s = h / 4;
+    for (let y = 0; y < 4; y++) for (let x = 0; x < w / s; x++) {
+      if ((x + y) % 2 === 0) {
+        g.fillStyle = '#0b1220';
+        g.fillRect(x * s, y * s, s, s);
+      }
+    }
+    g.fillStyle = bg;
+    g.fillRect(w * 0.2, h * 0.12, w * 0.6, h * 0.76);
+  }
+  g.fillStyle = fg;
+  g.font = `italic 900 ${Math.round(h * 0.62)}px "Segoe UI", Arial, sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(text, w / 2, h / 2 + 3);
+  const tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+const BANNER_TEXTS = [
+  ['SKIFAHREN', '#ff5a1f', '#ffffff'],
+  ['SLALOM CUP 2026', '#0b2a55', '#ffffff'],
+  ['FULL SEND', '#ffd23f', '#1a1200'],
+  ['KEEP CARVING', '#1d8fe0', '#ffffff'],
+];
+
+class SlalomWorld {
+  constructor(scene) {
+    this.scene = scene;
+    this.group = new THREE.Group();
+    scene.add(this.group);
+    this.chunks = [];
+    this.gateObjs = [];
+    this.next = 0;
+    this.vc = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
+    this.rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    this.build();
+  }
+
+  build() {
+    this.buildTerrain();
+    this.buildTrees();
+    this.buildFence();
+    this.buildGates();
+    this.buildKickerArches();
+    this.buildStartFinish();
+  }
+
+  buildTerrain() {
+    const nx = Math.round((SW_HALFW * 2) / SW_STEP_X);
+    const total = SW_Z_FROM - SW_Z_TO;
+    const nChunks = Math.ceil(total / SW_CHUNK);
+    for (let c = 0; c < nChunks; c++) {
+      const z0 = SW_Z_FROM - c * SW_CHUNK;
+      const nz = SW_CHUNK / SW_STEP_Z;
+      const zm = z0 - SW_CHUNK / 2;
+      const xmin = Math.round((centerOfCourse(zm) - SW_HALFW) / SW_STEP_X) * SW_STEP_X;
+      const nx1 = nx + 1;
+      const nz1 = nz + 1;
+      const pos = new Float32Array(nx1 * nz1 * 3);
+      const nor = new Float32Array(nx1 * nz1 * 3);
+      const col = new Float32Array(nx1 * nz1 * 3);
+      const e = 0.5;
+      for (let j = 0; j < nz1; j++) {
+        const z = z0 - j * SW_STEP_Z;
+        const cx = centerOfCourse(z);
+        for (let i = 0; i < nx1; i++) {
+          const x = xmin + i * SW_STEP_X;
+          const k = j * nx1 + i;
+          const h = courseHeight(x, z);
+          pos[k * 3] = x;
+          pos[k * 3 + 1] = h;
+          pos[k * 3 + 2] = z;
+          const gx = (courseHeight(x + e, z) - courseHeight(x - e, z)) / (2 * e);
+          const gz = (courseHeight(x, z + e) - courseHeight(x, z - e)) / (2 * e);
+          const l = Math.hypot(gx, 1, gz);
+          nor[k * 3] = -gx / l;
+          nor[k * 3 + 1] = 1 / l;
+          nor[k * 3 + 2] = -gz / l;
+          const ny = 1 / l;
+          const d = Math.abs(x - cx);
+          const piste = 1 - swSmooth(COURSE_HALF - 1, COURSE_HALF + 3, d);
+          const cord = Math.sin(x * 1.7 + Math.sin(z * 0.02) * 2) * 0.03 + Math.sin(x * 0.5 + z * 0.08) * 0.02;
+          const powder = 0.02 * Math.sin(x * 0.31 + z * 0.23) + 0.015 * Math.sin(x * 0.9 - z * 0.6);
+          let r = swMix(0.82 + powder, 0.94 + cord, piste);
+          let g = swMix(0.87 + powder, 0.96 + cord, piste);
+          let b = swMix(0.97, 1.0, piste);
+          const edge = 1 - swSmooth(0.0, 0.9, Math.abs(d - (COURSE_HALF - 0.2)));
+          r = swMix(r, 0.25, edge * 0.7);
+          g = swMix(g, 0.55, edge * 0.7);
+          b = swMix(b, 0.95, edge * 0.7);
+          const rock = swSmooth(0.8, 0.55, ny) * (d > FENCE_U ? 1 : 0);
+          r = swMix(r, 0.4, rock);
+          g = swMix(g, 0.42, rock);
+          b = swMix(b, 0.48, rock);
+          if (courseKickerHeight(x, z) > 0.03) {
+            r = swMix(r, 0.12, 0.85);
+            g = swMix(g, 0.58, 0.85);
+            b = swMix(b, 1.0, 0.85);
+          }
+          col[k * 3] = swLin(r);
+          col[k * 3 + 1] = swLin(g);
+          col[k * 3 + 2] = swLin(b);
+        }
+      }
+      const idx = new Uint32Array(nx * nz * 6);
+      let q = 0;
+      for (let j = 0; j < nz; j++) {
+        for (let i = 0; i < nx; i++) {
+          const a = j * nx1 + i;
+          const b = a + 1;
+          const cc = a + nx1;
+          const dd = cc + 1;
+          idx[q++] = a; idx[q++] = b; idx[q++] = cc;
+          idx[q++] = b; idx[q++] = dd; idx[q++] = cc;
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      geo.setIndex(new THREE.BufferAttribute(idx, 1));
+      geo.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geo, this.vc);
+      mesh.receiveShadow = true;
+      this.group.add(mesh);
+      this.chunks.push({ z0, zm, mesh, extras: [] });
+    }
+  }
+
+  chunkAt(z) {
+    const c = Math.floor((SW_Z_FROM - z) / SW_CHUNK);
+    return this.chunks[Math.min(this.chunks.length - 1, Math.max(0, c))];
+  }
+
+  buildTrees() {
+    const treeGeo = swTreeGeo();
+    const rockGeo = swRockGeo();
+    const d = new THREE.Object3D();
+    const perChunk = this.chunks.map(() => ({ trees: [], rocks: [] }));
+    for (let t = -60; t < FINISH_T + 230; t += 6) {
+      const z = -t;
+      for (const side of [-1, 1]) {
+        for (let n = 0; n < 6; n++) {
+          const id = Math.round(t) * 31 + n * 7 + (side > 0 ? 1000003 : 0);
+          const off = FENCE_U + 4 + swHash(id * 1.3) * 90 + (n > 3 ? 40 : 0);
+          const x = centerOfCourse(z) + side * off;
+          const zz = z + (swHash(id * 2.1) - 0.5) * 6;
+          const y = courseHeight(x, zz);
+          const ny = courseNormal(x, zz).y;
+          const r = swHash(id * 3.7);
+          if (ny > 0.72 && r < 0.78) {
+            const alt = y - courseHeight(centerOfCourse(zz), zz);
+            if (alt > 105 + swHash(id) * 25) continue; // Baumgrenze
+            perChunk[this.chunks.indexOf(this.chunkAt(zz))].trees.push({ x, y, z: zz, s: 0.8 + swHash(id * 4.7) * 1.2, id });
+          } else if (ny < 0.8 && r > 0.9) {
+            perChunk[this.chunks.indexOf(this.chunkAt(zz))].rocks.push({ x, y, z: zz, s: 0.9 + swHash(id * 5.3) * 1.6, id });
+          }
+        }
+      }
+    }
+    perChunk.forEach((pc, ci) => {
+      const ch = this.chunks[ci];
+      if (pc.trees.length) {
+        const im = new THREE.InstancedMesh(treeGeo, this.vc, pc.trees.length);
+        pc.trees.forEach((o, i) => {
+          d.position.set(o.x, o.y - 0.2, o.z);
+          d.rotation.set(0, o.id * 0.7, 0);
+          d.scale.set(o.s, o.s * (0.9 + (o.id % 7) * 0.04), o.s);
+          d.updateMatrix();
+          im.setMatrixAt(i, d.matrix);
+        });
+        im.castShadow = false;
+        im.frustumCulled = false;
+        this.group.add(im);
+        ch.extras.push(im);
+      }
+      if (pc.rocks.length) {
+        const im = new THREE.InstancedMesh(rockGeo, this.rockMat, pc.rocks.length);
+        pc.rocks.forEach((o, i) => {
+          d.position.set(o.x, o.y - 0.1, o.z);
+          d.rotation.set(o.id * 0.31, o.id * 1.3, o.id * 0.17);
+          d.scale.set(o.s * 1.4, o.s * 0.9, o.s);
+          d.updateMatrix();
+          im.setMatrixAt(i, d.matrix);
+        });
+        im.frustumCulled = false;
+        this.group.add(im);
+        ch.extras.push(im);
+      }
+    });
+  }
+
+  buildFence() {
+    const netMat = new THREE.MeshStandardMaterial({
+      color: swColor(0xff6a1a), roughness: 0.8, side: THREE.DoubleSide, transparent: true, opacity: 0.92,
+    });
+    const postMat = new THREE.MeshStandardMaterial({ color: swColor(0x1a2233), roughness: 0.6 });
+    const postGeo = new THREE.CylinderGeometry(0.09, 0.09, 2.2, 6);
+    postGeo.translate(0, 0.9, 0);
+    const zA = 70;
+    const zB = -(FINISH_T + 90);
+    const step = 3;
+    const n = Math.round((zA - zB) / step);
+    const textures = BANNER_TEXTS.map(([t, bg, fg]) => swTextTexture(t, bg, fg));
+    const bannerMats = textures.map((tex) => new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, fog: true }));
+    const dummy = new THREE.Object3D();
+    for (const side of [-1, 1]) {
+      const pos = new Float32Array((n + 1) * 2 * 3);
+      const idx = [];
+      const posts = [];
+      for (let i = 0; i <= n; i++) {
+        const z = zA - i * step;
+        const x = centerOfCourse(z) + side * FENCE_U;
+        const h = courseHeight(x, z);
+        pos.set([x, h - 0.15, z, x, h + 1.25, z], i * 6);
+        if (i % 3 === 0) posts.push([x, h, z]);
+        if (i < n) {
+          const a = i * 2;
+          idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      this.group.add(new THREE.Mesh(g, netMat));
+      const im = new THREE.InstancedMesh(postGeo, postMat, posts.length);
+      posts.forEach(([x, y, z], i) => {
+        dummy.position.set(x, y, z);
+        dummy.updateMatrix();
+        im.setMatrixAt(i, dummy.matrix);
+      });
+      im.frustumCulled = false;
+      this.group.add(im);
+
+      // Werbebanden an der Pistenseite des Zauns
+      for (let z = zA - 30, bi = 0; z > zB + 20; z -= 36, bi++) {
+        const half = 5.5;
+        const zs = [z + half, z - half];
+        const corner = zs.map((zz) => {
+          const x = centerOfCourse(zz) + side * (FENCE_U - 0.12);
+          return [x, courseHeight(x, zz), zz];
+        });
+        const hgt = 1.05;
+        const p = new Float32Array([
+          corner[0][0], corner[0][1] + 0.05, corner[0][2],
+          corner[1][0], corner[1][1] + 0.05, corner[1][2],
+          corner[0][0], corner[0][1] + 0.05 + hgt, corner[0][2],
+          corner[1][0], corner[1][1] + 0.05 + hgt, corner[1][2],
+        ]);
+        // Lesbar von der Piste aus: links läuft u Richtung -Z, rechts Richtung +Z
+        const u0 = side < 0 ? 0 : 1;
+        const u1 = 1 - u0;
+        const uv = new Float32Array([u0, 0, u1, 0, u0, 1, u1, 1]);
+        const bg = new THREE.BufferGeometry();
+        bg.setAttribute('position', new THREE.BufferAttribute(p, 3));
+        bg.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        bg.setIndex([0, 1, 2, 1, 3, 2]);
+        this.group.add(new THREE.Mesh(bg, bannerMats[(bi + (side > 0 ? 2 : 0)) % bannerMats.length]));
+      }
+    }
+  }
+
+  // Tore: zwei Stangen mit Fahne und ein Streifen auf dem Schnee
+  buildGates() {
+    const poleGeo = new THREE.CylinderGeometry(0.075, 0.075, POLE_H, 6);
+    poleGeo.translate(0, POLE_H / 2, 0);
+    const flagGeo = new THREE.BoxGeometry(0.95, 0.62, 0.05);
+    const stripGeo = new THREE.PlaneGeometry(1, 1.4);
+    stripGeo.rotateX(-Math.PI / 2);
+    const red = new THREE.MeshStandardMaterial({ color: swColor(0xe42626), roughness: 0.5, emissive: swColor(0x4a0606) });
+    const blue = new THREE.MeshStandardMaterial({ color: swColor(0x1b6ff0), roughness: 0.5, emissive: swColor(0x06224a) });
+    const q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0);
+    GATES.forEach((g, i) => {
+      const grp = new THREE.Group();
+      const mat = i % 2 === 0 ? red : blue;
+      const half = g.w / 2;
+      const poles = [];
+      for (const s of [-1, 1]) {
+        const x = g.x + s * half;
+        const y = courseHeight(x, g.z);
+        const pole = new THREE.Mesh(poleGeo, mat);
+        pole.position.set(x, y, g.z);
+        pole.castShadow = true;
+        const flag = new THREE.Mesh(flagGeo, mat);
+        flag.position.set(x - s * 0.5, y + POLE_H - 0.4, g.z);
+        flag.castShadow = true;
+        grp.add(pole, flag);
+        poles.push({ pole, flag, x, y });
+      }
+      const sm = new THREE.MeshBasicMaterial({
+        color: swColor(0xfff3c4), transparent: true, opacity: 0.32, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      });
+      const strip = new THREE.Mesh(stripGeo, sm);
+      strip.scale.set(g.w - 0.3, 1, 1);
+      const cy = courseHeight(g.x, g.z);
+      strip.position.set(g.x, cy + 0.07, g.z);
+      const n = courseNormal(g.x, g.z);
+      q.setFromUnitVectors(up, new THREE.Vector3(n.x, n.y, n.z));
+      strip.quaternion.copy(q);
+      grp.add(strip);
+      this.group.add(grp);
+      this.gateObjs.push({ grp, poles, strip, sm, state: 'open', hitT: 0 });
+    });
+  }
+
+  gateState(i, state) {
+    const o = this.gateObjs[i];
+    o.state = state;
+    o.hitT = 0.6;
+    if (state === 'hit') {
+      o.sm.color.copy(swColor(0x56e39a));
+      o.sm.opacity = 0.55;
+    } else if (state === 'miss') {
+      o.sm.color.copy(swColor(0xff4040));
+      o.sm.opacity = 0.5;
+    }
+  }
+
+  // Pole wackelt nach Berührung
+  poleHit(i, s) {
+    const o = this.gateObjs[i];
+    o.poles[s].wobble = 0.5;
+  }
+
+  resetGates() {
+    this.gateObjs.forEach((o) => {
+      o.state = 'open';
+      o.sm.color.copy(swColor(0xfff3c4));
+      o.sm.opacity = 0.32;
+      o.poles.forEach((p) => {
+        p.wobble = 0;
+        p.pole.rotation.set(0, 0, 0);
+      });
+    });
+    this.next = 0;
+  }
+
+  setNextGate(i) {
+    this.next = i;
+  }
+
+  update(dt, z, time) {
+    // weit entfernte Streifen ausblenden (Nebel verdeckt sie sowieso)
+    for (const c of this.chunks) {
+      const vis = Math.abs(c.zm - z) < 900;
+      if (c.mesh.visible !== vis) {
+        c.mesh.visible = vis;
+        for (const m of c.extras) m.visible = vis;
+      }
+    }
+    this.gateObjs.forEach((o, i) => {
+      if (o.state === 'open') {
+        const near = i === this.next;
+        o.sm.opacity = near ? 0.45 + 0.25 * Math.sin(time * 7) : 0.28;
+        o.sm.color.copy(near ? swColor(0xffe066) : swColor(0xfff3c4));
+      }
+      for (const p of o.poles) {
+        if (p.wobble > 0) {
+          p.wobble = Math.max(0, p.wobble - dt);
+          p.pole.rotation.x = Math.sin(p.wobble * 40) * p.wobble * 0.5;
+          p.flag.rotation.x = p.pole.rotation.x * 0.5;
+        }
+      }
+    });
+  }
+
+  buildKickerArches() {
+    const mat = new THREE.MeshBasicMaterial({ color: swColor(0xff5a14) });
+    const mat2 = new THREE.MeshBasicMaterial({ color: swColor(0xfff6ea) });
+    const poleGeo = new THREE.BoxGeometry(0.45, 1, 0.45);
+    poleGeo.translate(0, 0.5, 0);
+    const barGeo = new THREE.BoxGeometry(1, 0.6, 0.45);
+    for (const k of KICKERS) {
+      const lz = k.z0 - k.len;
+      const H = 3.4 + ({ small: 0, medium: 1, large: 2 }[k.type]) * 1.4;
+      const hw = k.w * 0.95;
+      const base = Math.max(courseHeight(k.x0 - hw, lz), courseHeight(k.x0 + hw, lz));
+      for (const s of [-1, 1]) {
+        const y = courseHeight(k.x0 + s * hw, lz);
+        const m = new THREE.Mesh(poleGeo, mat);
+        m.position.set(k.x0 + s * hw, y - 0.2, lz);
+        m.scale.set(1, base + H - y + 0.2, 1);
+        m.castShadow = true;
+        this.group.add(m);
+      }
+      const bar = new THREE.Mesh(barGeo, mat);
+      bar.position.set(k.x0, base + H, lz);
+      bar.scale.set(hw * 2 + 0.45, 1, 1);
+      const stripe = new THREE.Mesh(barGeo, mat2);
+      stripe.position.set(k.x0, base + H, lz + 0.05);
+      stripe.scale.set(hw * 2 - 1.2, 0.4, 1.1);
+      this.group.add(bar, stripe);
+    }
+  }
+
+  buildStartFinish() {
+    const postMat = new THREE.MeshStandardMaterial({ color: swColor(0x1a2233), roughness: 0.5 });
+    const postGeo = new THREE.BoxGeometry(0.5, 1, 0.5);
+    postGeo.translate(0, 0.5, 0);
+    const arch = (z, label, bg, fg, checker, half) => {
+      const c = centerOfCourse(z);
+      const hL = courseHeight(c - half, z);
+      const hR = courseHeight(c + half, z);
+      const top = Math.max(hL, hR) + 6.2;
+      for (const [s, h] of [[-1, hL], [1, hR]]) {
+        const p = new THREE.Mesh(postGeo, postMat);
+        p.position.set(c + s * half, h - 0.2, z);
+        p.scale.set(1, top - h + 0.2, 1);
+        p.castShadow = true;
+        this.group.add(p);
+      }
+      const tex = swTextTexture(label, bg, fg, 1024, 160, checker);
+      const banner = new THREE.Mesh(
+        new THREE.PlaneGeometry(half * 2 + 0.5, 2.1),
+        new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })
+      );
+      banner.position.set(c, top - 0.9, z);
+      this.group.add(banner);
+    };
+    arch(-4, 'START', '#ff5a1f', '#ffffff', false, 8);
+    arch(-FINISH_T, 'ZIEL', '#ffffff', '#0b1220', true, COURSE_HALF - 2);
+    // Ziellinie (Schachbrett) auf dem Schnee
+    const cv = document.createElement('canvas');
+    cv.width = 256;
+    cv.height = 32;
+    const g = cv.getContext('2d');
+    for (let y = 0; y < 2; y++) for (let x = 0; x < 32; x++) {
+      g.fillStyle = (x + y) % 2 ? '#0b1220' : '#ffffff';
+      g.fillRect(x * 8, y * 16, 8, 16);
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.encoding = THREE.sRGBEncoding;
+    const w = (COURSE_HALF - 0.5) * 2;
+    const pg = new THREE.PlaneGeometry(w, 1.6);
+    pg.rotateX(-Math.PI / 2);
+    const line = new THREE.Mesh(pg, new THREE.MeshBasicMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    const fz = -FINISH_T;
+    const fx = centerOfCourse(fz);
+    line.position.set(fx, courseHeight(fx, fz) + 0.08, fz);
+    const n = courseNormal(fx, fz);
+    line.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(n.x, n.y, n.z));
+    this.group.add(line);
+  }
+}
+
+
+
+
+
+
+
+
+
+const $ = (id) => document.getElementById(id);
+const lerp = (a, b, t) => a + (b - a) * t;
+const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
+const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
+
+// ---------- Renderer / Szene ----------
+const isTouch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouch, powerPreference: 'high-performance' });
+const PR_MAX = Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 1.75);
+let pr = PR_MAX;
+renderer.setPixelRatio(pr);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(new THREE.Color(0xcfe2f3).convertSRGBToLinear(), 0.0024);
+
+const THEMES = [
+  { name: 'Tag', sky: ['#2f6fc0', '#7fb4e6', '#cfe2f3', '#e8f1fa'], fog: 0xcfe2f3, sun: 0xfff1d6, sunI: 1.7, hemi: [0xcfe3ff, 0xc2d0e6, 1.0], mt: 0xffffff, sunDir: [-70, 80, 60], exp: 0.85 },
+  { name: 'Sonnenuntergang', sky: ['#4a4f9a', '#d9788f', '#ffae6e', '#ffe0a8'], fog: 0xf5bf94, sun: 0xff9a4d, sunI: 2.0, hemi: [0xffcfae, 0xe0b0b8, 0.8], mt: 0xffcdb4, sunDir: [-120, 40, -80], exp: 1.0 },
+  { name: 'Blaue Stunde', sky: ['#1a2f66', '#3f64a8', '#8fb0dd', '#c9d8f0'], fog: 0xa4b9dc, sun: 0xcfe0ff, sunI: 1.5, hemi: [0xc2d4fa, 0xa8b8dc, 1.0], mt: 0xc4d2f4, sunDir: [80, 90, 70], exp: 1.05 },
+];
+let themeIdx = 0;
+function makeSky(stops) {
+  const c = document.createElement('canvas');
+  c.width = 4;
+  c.height = 256;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, stops[0]);
+  grad.addColorStop(0.45, stops[1]);
+  grad.addColorStop(0.8, stops[2]);
+  grad.addColorStop(1, stops[3]);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 4, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding;
+  return tex;
+}
+scene.background = makeSky(THEMES[0].sky);
+
+const camera = new THREE.PerspectiveCamera(64, 1, 0.1, 2600);
+const hemi = new THREE.HemisphereLight(0xcfe6ff, 0xdfe8f5, 0.75);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
+sun.castShadow = true;
+sun.shadow.mapSize.set(isTouch ? 1024 : 1536, isTouch ? 1024 : 1536);
+const sc = sun.shadow.camera;
+sc.left = -48; sc.right = 48; sc.top = 48; sc.bottom = -48; sc.near = 10; sc.far = 320;
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.6;
+scene.add(sun, sun.target);
+
+// Ferne Berge als Kulisse (weit hinter dem Hang, folgen der Kamera)
+const mountains = new THREE.Group();
+const mtMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
+for (let i = 0; i < 26; i++) {
+  const a = (i / 26) * Math.PI * 2 + Math.sin(i * 12.9) * 0.15;
+  const h = 300 + ((Math.sin(i * 78.2) + 1) / 2) * 420;
+  const r = 240 + ((Math.sin(i * 41.7) + 1) / 2) * 260;
+  const geo = new THREE.ConeGeometry(r, h, 6 + (i % 3), 1);
+  const p = geo.attributes.position;
+  const cols = new Float32Array(p.count * 3);
+  for (let v = 0; v < p.count; v++) {
+    const t = (p.getY(v) + h / 2) / h;
+    const snow = Math.min(1, Math.max(0, (t - 0.45) / 0.25));
+    const rock = [0.36, 0.45, 0.62];
+    const wht = [0.95, 0.97, 1.0];
+    const low = Math.max(0, 1 - t / 0.3) * 0.85;
+    const fogc = [0.81, 0.89, 0.95];
+    for (let k = 0; k < 3; k++) cols[v * 3 + k] = Math.pow(lerp(lerp(rock[k], wht[k], snow), fogc[k], low), 2.2);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  const m = new THREE.Mesh(geo, mtMat);
+  const dist = 1500 + (i % 4) * 160;
+  m.position.set(Math.sin(a) * dist, h / 2 - 150, Math.cos(a) * dist);
+  mountains.add(m);
+}
+scene.add(mountains);
+
+const world = new SlalomWorld(scene);
+const spray = new Spray(scene);
+const snowfall = new Snowfall(scene, isTouch ? 600 : 1400);
+const trail = new Trail(scene);
+const skier = createSkier();
+scene.add(skier.root);
+const audio = new GameAudio();
+const sim = new SkierSim(courseTerrain);
+sim.reset(START.x, START.z);
+
+function applyTheme(i) {
+  const t = THEMES[i % THEMES.length];
+  themeIdx = i % THEMES.length;
+  if (scene.background && scene.background.dispose) scene.background.dispose();
+  scene.background = makeSky(t.sky);
+  scene.fog.color.set(t.fog).convertSRGBToLinear();
+  sun.color.set(t.sun);
+  sun.intensity = t.sunI;
+  hemi.color.set(t.hemi[0]);
+  hemi.groundColor.set(t.hemi[1]);
+  hemi.intensity = t.hemi[2];
+  mtMat.color.set(t.mt);
+  renderer.toneMappingExposure = t.exp;
+}
+
+// ---------- Eingabe ----------
+const keys = new Set();
+let jumpEdge = false;
+let boostEdge = false;
+let startEdge = false;
+let restartEdge = false;
+window.addEventListener('keydown', (e) => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+  if (!keys.has(e.code)) {
+    if (e.code === 'Space') jumpEdge = true;
+    if (e.code === 'KeyE') boostEdge = true;
+    if (e.code === 'Space' || e.code === 'Enter') startEdge = true;
+    if (e.code === 'KeyR') restartEdge = true;
+    if (e.code === 'KeyM') {
+      const m = audio.toggleMute();
+      $('mute').textContent = (m ? 'Ton aus (M)' : 'Ton an (M)') + ' · Neustart (R)';
+    }
+  }
+  keys.add(e.code);
+  audio.init();
+});
+window.addEventListener('keyup', (e) => keys.delete(e.code));
+window.addEventListener('blur', () => keys.clear());
+
+const touch = { left: false, right: false, tuck: false, grab: false };
+const touchRoles = new Map();
+function roleFor(t) {
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  const b = el && el.closest ? el.closest('[data-btn]') : null;
+  if (b) return b.dataset.btn;
+  return t.clientX < window.innerWidth / 2 ? 'left' : 'right';
+}
+function syncTouch() {
+  touch.left = touch.right = touch.tuck = touch.grab = false;
+  for (const r of touchRoles.values()) {
+    if (r === 'left') touch.left = true;
+    else if (r === 'right') touch.right = true;
+    else if (r === 'tuck') touch.tuck = true;
+    else if (r === 'grab') touch.grab = true;
+  }
+  $('b-tuck').classList.toggle('on', touch.tuck);
+  $('b-grab').classList.toggle('on', touch.grab);
+}
+window.addEventListener('touchstart', (e) => {
+  audio.init();
+  for (const t of e.changedTouches) {
+    const role = roleFor(t);
+    touchRoles.set(t.identifier, role);
+    if (role === 'jump') jumpEdge = true;
+    if (role === 'boost') boostEdge = true;
+    if (state !== 'run' && state !== 'countdown' && !['jump', 'tuck', 'grab', 'boost'].includes(role)) startEdge = true;
+  }
+  syncTouch();
+}, { passive: true });
+const touchEnd = (e) => {
+  for (const t of e.changedTouches) touchRoles.delete(t.identifier);
+  syncTouch();
+};
+window.addEventListener('touchend', touchEnd, { passive: true });
+window.addEventListener('touchcancel', touchEnd, { passive: true });
+if (isTouch) document.body.classList.add('touch');
+$('start').addEventListener('click', () => { audio.init(); startEdge = true; });
+$('retry').addEventListener('click', () => { startEdge = true; });
+
+function readInput() {
+  const left = keys.has('ArrowLeft') || keys.has('KeyA') || touch.left;
+  const right = keys.has('ArrowRight') || keys.has('KeyD') || touch.right;
+  const up = keys.has('ArrowUp') || keys.has('KeyW');
+  const down = keys.has('ArrowDown') || keys.has('KeyS') || touch.tuck;
+  return {
+    steer: (right ? 1 : 0) - (left ? 1 : 0),
+    tuck: down,
+    brake: keys.has('ShiftLeft') || keys.has('ShiftRight'),
+    jump: keys.has('Space'),
+    jumpPressed: jumpEdge,
+    flipAxis: (up ? 1 : 0) - (down ? 1 : 0),
+    grab: keys.has('KeyG') || touch.grab,
+  };
+}
+
+// ---------- Spielstand / Speicher ----------
+const STORE = 'skifahren.slalom.v1';
+let save = { bestTime: 0, bestScore: 0, splits: [], runs: 0 };
+try {
+  const s = JSON.parse(localStorage.getItem(STORE) || 'null');
+  if (s && typeof s === 'object') save = { ...save, ...s };
+} catch (e) {}
+function persist() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify(save));
+  } catch (e) {}
+}
+
+// ---------- Zustand ----------
+let state = 'menu'; // menu | countdown | run | finish
+let runTime = 0; // reine Fahrzeit
+let penalty = 0;
+let points = 0;
+let streak = 0;
+let comboT = 0;
+let meter = 0;
+let bestTrick = 0;
+let topSpeed = 0;
+let gatesHit = 0;
+let gatesMissed = 0;
+let nextGate = 0;
+let splits = [];
+let countT = 0;
+let respawnT = 0;
+let finishT = 0;
+let shake = 0;
+let time = 0;
+let camYaw = 0;
+let fov = 64;
+let runCount = 0;
+let lastCount = 4;
+let result = null;
+const camPos = new THREE.Vector3(0, 10, 12);
+const mult = () => Math.min(8, 1 + 0.5 * streak);
+const totalTime = () => runTime + penalty;
+
+function popup(text, cls = '') {
+  const el = document.createElement('div');
+  el.className = 'pop ' + cls;
+  el.textContent = text;
+  $('popups').appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+function award(p, label, cls) {
+  const v = Math.round(p * mult());
+  points += v;
+  meter = Math.min(100, meter + Math.min(30, v / 25));
+  bestTrick = Math.max(bestTrick, v);
+  popup(`${label}  +${v}`, cls);
+}
+function addPenalty(sec, label) {
+  penalty += sec;
+  popup(`${label}  +${sec.toFixed(0)} s`, 'pen');
+  const el = $('sl-pen');
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+
+// Fortschrittsleiste mit Torpunkten
+function buildDots() {
+  const box = $('sl-dots');
+  box.innerHTML = '';
+  GATES.forEach((g) => {
+    const i = document.createElement('i');
+    i.style.left = (g.t / FINISH_T) * 100 + '%';
+    box.appendChild(i);
+  });
+  SPLIT_GATES.forEach((gi) => {
+    const i = document.createElement('i');
+    i.className = 'sec';
+    i.style.left = ((GATES[gi].t + 18) / FINISH_T) * 100 + '%';
+    box.appendChild(i);
+  });
+}
+buildDots();
+const dotEls = () => Array.from($('sl-dots').children).slice(0, GATES.length);
+
+function startRun() {
+  sim.reset(START.x, START.z);
+  world.resetGates();
+  runTime = 0;
+  penalty = 0;
+  points = 0;
+  streak = 0;
+  comboT = 0;
+  meter = 0;
+  bestTrick = 0;
+  topSpeed = 0;
+  gatesHit = 0;
+  gatesMissed = 0;
+  nextGate = 0;
+  splits = [];
+  respawnT = 0;
+  trail.clear();
+  applyTheme(runCount++);
+  camYaw = 0;
+  countT = 3.2;
+  lastCount = 4;
+  state = 'countdown';
+  dotEls().forEach((d) => (d.className = ''));
+  $('sl-pen').textContent = '';
+  $('menu').classList.add('hidden');
+  $('over').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  $('touchui').classList.toggle('hidden', !isTouch);
+  $('sl-count').classList.remove('hidden');
+  audio.start();
+  camPos.set(sim.x + 5, sim.y + 4, sim.z + 12);
+}
+
+function showSplit(label, t) {
+  const best = save.splits && save.splits.length ? save.splits : null;
+  const idx = splits.length - 1;
+  const el = $('sl-split');
+  let delta = '';
+  el.classList.remove('fast', 'slow');
+  if (best && best[idx] != null) {
+    const d = t - best[idx];
+    delta = (d <= 0 ? '−' : '+') + Math.abs(d).toFixed(2);
+    el.classList.add(d <= 0 ? 'fast' : 'slow');
+  }
+  el.innerHTML = `${formatTime(t)}<small>${label}${delta ? ' · ' + delta : ''}</small>`;
+  el.classList.remove('hidden');
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = '';
+}
+
+function finishRun() {
+  state = 'finish';
+  finishT = 0;
+  const tot = totalTime();
+  splits.push(tot);
+  const score = finalScore(points, tot);
+  const isBest = !save.bestTime || tot < save.bestTime;
+  const newScore = score > save.bestScore;
+  if (isBest) {
+    save.bestTime = tot;
+    save.splits = splits.slice();
+  }
+  if (newScore) save.bestScore = score;
+  save.runs++;
+  persist();
+  result = { tot, score, isBest };
+  audio.huge();
+  setTimeout(showResult, 1800);
+}
+
+function showResult() {
+  if (state !== 'finish' || !result) return;
+  const medal = medalFor(result.tot);
+  const m = $('o-medal');
+  m.textContent = medal ? medal + '-Medaille' : 'Im Ziel';
+  m.className = 'eyebrow ' + medal.toLowerCase();
+  $('o-time').textContent = formatTime(result.tot);
+  $('o-new').classList.toggle('hidden', !result.isBest);
+  $('o-raw').textContent = formatTime(runTime);
+  $('o-pen').textContent = '+' + penalty.toFixed(2);
+  $('o-gates').textContent = `${gatesHit} / ${GATES.length}`;
+  $('o-points').textContent = Math.round(points).toLocaleString('de-CH');
+  $('o-bonus').textContent = '+' + Math.round(result.score - points).toLocaleString('de-CH');
+  $('o-score').textContent = result.score.toLocaleString('de-CH');
+  $('o-btime').textContent = formatTime(save.bestTime);
+  $('o-bscore').textContent = save.bestScore.toLocaleString('de-CH');
+  $('o-speed').textContent = Math.round(topSpeed * 3.6) + ' km/h';
+  $('o-trick').textContent = bestTrick.toLocaleString('de-CH');
+  $('touchui').classList.add('hidden');
+  $('over').classList.remove('hidden');
+}
+
+// ---------- Events der Physik ----------
+function handleEvents() {
+  for (const e of sim.drainEvents()) {
+    if (e.type === 'takeoff') {
+      if (e.ollie) audio.jump();
+    } else if (e.type === 'land') {
+      const big = e.airTime > 0.45 || e.spins > 0 || e.flips > 0;
+      if (e.impact > 6) audio.land(e.impact);
+      spray.emit(sim.x, sim.y + 0.2, sim.z, 0, 3, 0, 7, Math.min(60, 8 + e.impact * 3));
+      shake = Math.max(shake, Math.min(0.5, e.impact * 0.02));
+      if (big && e.clean && state === 'run') {
+        let pts = e.airTime * 60 + e.spins * 150 + e.flips * 350;
+        const parts = [];
+        if (e.grab > 0.35) {
+          parts.push('GRAB');
+          pts += e.grab * 90;
+        }
+        if (e.flips) parts.push(e.flips > 1 ? `${e.flips}x FLIP` : 'FLIP');
+        if (e.spins) parts.push(`${e.spins * 180}°`);
+        if (e.airTime > 1.3) {
+          parts.unshift(e.airTime > 2 ? 'MEGA AIR' : 'HUGE AIR');
+          pts += e.airTime * 120;
+          audio.huge();
+        }
+        if (!parts.length) parts.push(`AIR ${e.airTime.toFixed(1)}s`);
+        streak++;
+        comboT = 5;
+        award(pts, parts.join(' + '), 'trick');
+        audio.trick(Math.min(6, e.spins + e.flips * 2));
+      } else if (big && !e.clean) {
+        popup('WACKELIG', 'bad');
+      }
+    } else if (e.type === 'crash') {
+      if (state === 'run') {
+        addPenalty(CRASH_PENALTY, 'STURZ');
+        streak = 0;
+        comboT = 0;
+        respawnT = 1.5;
+      }
+      audio.crash();
+      shake = 1;
+      spray.emit(sim.x, sim.y + 0.5, sim.z, sim.vx * 0.3, 5, sim.vz * 0.3, 10, 120);
+    }
+  }
+}
+
+function respawn() {
+  const c = centerOfCourse(sim.z);
+  const x = c + clampN(sim.x - c, -10, 10);
+  const z = sim.z;
+  const top = topSpeed;
+  sim.reset(x, z);
+  topSpeed = top;
+  sim.vz = -10;
+  respawnT = 0;
+  trail.clear();
+}
+
+// ---------- Tore, Stangen, Zaun ----------
+function checkCourse(px, pz) {
+  // Zaun
+  const f = fenceCheck(sim.x, sim.z);
+  if (f) {
+    sim.x = f.x;
+    const out = sim.vx * f.side;
+    if (out > 0) sim.vx -= out * 1.4;
+    sim.vz *= 0.97;
+    shake = Math.max(shake, 0.12);
+    if (!checkCourse.fenceCd || time - checkCourse.fenceCd > 0.8) {
+      checkCourse.fenceCd = time;
+      audio.land(8);
+    }
+  }
+  if (state !== 'run' || sim.crashed) return;
+
+  // Tore
+  while (nextGate < GATES.length && GATES[nextGate].z > sim.z) {
+    const g = GATES[nextGate];
+    const c = gateCrossing(px, pz, sim.x, sim.z, g);
+    if (c) {
+      if (c.hit) {
+        gatesHit++;
+        streak++;
+        comboT = 5;
+        world.gateState(nextGate, 'hit');
+        dotEls()[nextGate].className = 'hit';
+        const kmh = sim.speed * 3.6;
+        let p = 60 + kmh * 0.8;
+        let label = `TOR ${gatesHit}`;
+        if (c.perfect) {
+          p += 70;
+          label = 'PERFEKT';
+          meter = Math.min(100, meter + 10);
+        }
+        meter = Math.min(100, meter + 10);
+        award(p, label, 'gate');
+        audio.gate(Math.min(8, streak));
+      } else {
+        gatesMissed++;
+        streak = 0;
+        comboT = 0;
+        world.gateState(nextGate, 'miss');
+        dotEls()[nextGate].className = 'miss';
+        addPenalty(MISS_PENALTY, 'TOR VERPASST');
+        audio.close();
+      }
+      const si = SPLIT_GATES.indexOf(nextGate);
+      if (si >= 0) {
+        splits.push(totalTime());
+        showSplit('Zwischenzeit ' + (si + 1), totalTime());
+      }
+    }
+    nextGate++;
+  }
+  world.setNextGate(nextGate);
+
+  // Stangen (Berührung bremst und wackelt)
+  for (let i = Math.max(0, nextGate - 1); i < Math.min(GATES.length, nextGate + 2); i++) {
+    const g = GATES[i];
+    if (Math.abs(sim.z - g.z) > 1.5) continue;
+    for (let s = 0; s < 2; s++) {
+      const px2 = g.x + (s ? 1 : -1) * (g.w / 2);
+      if (Math.abs(sim.x - px2) < 0.55 && sim.y - courseHeight(px2, g.z) < POLE_H) {
+        const o = world.gateObjs[i].poles[s];
+        if (!o.wobble) {
+          world.poleHit(i, s);
+          const keep = 0.9;
+          sim.vx *= keep;
+          sim.vz *= keep;
+          shake = Math.max(shake, 0.18);
+          audio.land(7);
+        }
+      }
+    }
+  }
+
+  // Ziel
+  if (sim.z <= -FINISH_T) {
+    // genauer: Bruchteil des Schritts zurückrechnen
+    finishRun();
+  }
+}
+
+// ---------- Skifahrer-Pose ----------
+function poseSkier(dt, inp) {
+  const m = skier;
+  m.root.position.set(sim.x, sim.y, sim.z);
+  const fx = Math.sin(sim.heading);
+  const fz = -Math.cos(sim.heading);
+  const g = courseGradient(sim.x, sim.z);
+  const slope = Math.atan(g.x * fx + g.z * fz);
+  const lean = damp(sim.lean, -inp.steer * clampN(sim.speed / 30, 0.2, 1) * 0.5, 9, dt);
+  sim.lean = lean;
+  const rig = m.rig;
+  rig.rotation.order = 'YXZ';
+  if (sim.crashed) {
+    const a = Math.min(sim.crashTime * 9, Math.PI * 2 + 1.4);
+    rig.rotation.set(-a, -sim.heading, Math.sin(sim.crashTime * 7) * 0.4 * Math.exp(-sim.crashTime));
+    rig.position.y = 0.25 * Math.min(1, sim.crashTime * 3);
+  } else {
+    rig.position.y = 0;
+    if (sim.grounded) rig.rotation.set(slope, -sim.heading, lean);
+    else rig.rotation.set(-sim.flip + slope * 0.4, -sim.heading - sim.spin, lean * 0.5);
+  }
+  const grabK = sim.grabbing && !sim.grounded ? 1 : 0;
+  m.grab = damp(m.grab || 0, grabK, 14, dt);
+  const wantTuck = (inp.tuck && sim.grounded ? 1 : 0) + (!sim.grounded ? 0.5 : 0) + grabK * 0.7;
+  m.tuck = damp(m.tuck, wantTuck, 10, dt);
+  m.torsoPivot.rotation.x = -0.15 - m.tuck * 0.85;
+  m.torsoPivot.position.y = 0.62 - m.tuck * 0.18 - m.grab * 0.12;
+  m.head.rotation.x = m.tuck * 0.5;
+  for (let i = 0; i < 2; i++) {
+    m.arms[i].rotation.x = -0.4 - m.tuck * 0.9 - (i === 0 ? m.grab * 1.1 : 0);
+    m.arms[i].rotation.z = (i === 0 ? 1 : -1) * (0.25 + (sim.grounded ? 0 : 0.5));
+  }
+}
+
+// ---------- Kamera ----------
+const tmp = new THREE.Vector3();
+function updateCamera(dt) {
+  const sp = sim.speed;
+  if (state === 'menu') {
+    const a = time * 0.3;
+    const tx = sim.x + Math.sin(a) * 7;
+    const tz = sim.z + Math.cos(a) * 7;
+    camPos.set(tx, courseHeight(tx, tz) + 2.6, tz);
+    camera.position.copy(camPos);
+    camera.lookAt(sim.x, sim.y + 1.0, sim.z);
+    fov = damp(fov, 55, 4, dt);
+  } else {
+    const mv = sp > 2 ? Math.atan2(sim.vx, -sim.vz) : sim.heading;
+    let diff = mv - camYaw;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    camYaw += diff * (1 - Math.exp(-3.2 * dt));
+    const dist = 8.2 + sp * 0.035;
+    const up = 3.3 + sp * 0.012;
+    const bx = sim.x - Math.sin(camYaw) * dist;
+    const bz = sim.z + Math.cos(camYaw) * dist;
+    const by = Math.max(sim.y + up * 0.8, courseHeight(bx, bz) + 1.4) + up * 0.3;
+    tmp.set(bx, by, bz);
+    const k = state === 'finish' ? 1.5 : 7;
+    camPos.x = damp(camPos.x, tmp.x, k, dt);
+    camPos.y = damp(camPos.y, tmp.y, k, dt);
+    camPos.z = damp(camPos.z, tmp.z, k, dt);
+    camPos.y = Math.max(camPos.y, courseHeight(camPos.x, camPos.z) + 1.0);
+    camera.position.copy(camPos);
+    if (shake > 0) {
+      camera.position.x += (Math.random() - 0.5) * shake * 0.5;
+      camera.position.y += (Math.random() - 0.5) * shake * 0.5;
+      shake = Math.max(0, shake - dt * 2.2);
+    }
+    camera.lookAt(sim.x + Math.sin(camYaw) * 6, sim.y + 1.2, sim.z - Math.cos(camYaw) * 6);
+    const wantFov = 62 + clampN(sp, 0, 70) * 0.5 + (sim.grounded ? 0 : 4) + (sim.boostT > 0 ? 9 : 0);
+    fov = damp(fov, wantFov, 3, dt);
+  }
+  const f = Math.min(105, fov * (camera.aspect < 1 ? 1.3 : 1));
+  if (Math.abs(camera.fov - f) > 0.01) {
+    camera.fov = f;
+    camera.updateProjectionMatrix();
+  }
+}
+
+// ---------- HUD ----------
+let hudT = 0;
+function updateHud() {
+  $('speed').textContent = Math.round(sim.speed * 3.6);
+  $('score').textContent = Math.round(points).toLocaleString('de-CH');
+  $('best').textContent = save.bestTime ? 'Bestzeit ' + formatTime(save.bestTime) : '';
+  $('sl-time').textContent = formatTime(totalTime());
+  $('sl-pen').textContent = penalty > 0 ? `inkl. +${penalty.toFixed(0)} s Strafe` : '';
+  $('dist').textContent = `Tor ${Math.min(nextGate, GATES.length)} / ${GATES.length}`;
+  $('sl-fill').style.width = clampN((-sim.z / FINISH_T) * 100, 0, 100) + '%';
+  $('boostbar').style.width = meter + '%';
+  $('boostwrap').classList.toggle('ready', meter >= 20);
+  $('boostwrap').classList.toggle('active', sim.boostT > 0);
+  const cb = $('combo');
+  if (streak > 0 && comboT > 0) {
+    cb.classList.remove('hidden');
+    cb.textContent = 'x' + mult().toFixed(1);
+    $('combobar').style.width = (comboT / 5) * 100 + '%';
+    $('combowrap').classList.remove('hidden');
+  } else {
+    cb.classList.add('hidden');
+    $('combowrap').classList.add('hidden');
+  }
+  $('vignette').style.opacity = (clampN((sim.speed - 25) / 45, 0, 1) * 0.9).toFixed(2);
+}
+
+// ---------- Resize / adaptive Auflösung ----------
+function resize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+let ema = 16;
+let adaptT = 0;
+const NO_ADAPT = /[?&]noadapt/.test(location.search || '');
+const PR_MIN = Math.min(PR_MAX, 1);
+function adapt(dt) {
+  if (NO_ADAPT) return;
+  ema = ema * 0.95 + dt * 1000 * 0.05;
+  adaptT += dt;
+  if (adaptT < 1.5) return;
+  adaptT = 0;
+  if (ema > 26 && sun.castShadow) {
+    sun.castShadow = false;
+  } else if (ema > 34 && pr > PR_MIN) {
+    pr = Math.max(PR_MIN, pr * 0.9);
+    renderer.setPixelRatio(pr);
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+  }
+}
+
+// ---------- Hauptschleife ----------
+let last = performance.now();
+const FIXED = 1 / 120;
+let acc = 0;
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  time += dt;
+
+  if (restartEdge && (state === 'run' || state === 'countdown' || state === 'finish')) startRun();
+  restartEdge = false;
+  if (startEdge) {
+    startEdge = false;
+    if (state === 'menu' || (state === 'finish' && finishT > 1.2)) startRun();
+  }
+
+  const inp = readInput();
+  adapt(dt);
+
+  if (state === 'countdown') {
+    countT -= dt;
+    const n = Math.ceil(countT);
+    const el = $('sl-count');
+    if (n !== lastCount) {
+      lastCount = n;
+      if (n > 0) {
+        el.textContent = n;
+        el.classList.remove('go');
+        audio.tone(520, 0.14, 0.12, 'square');
+      } else {
+        el.textContent = 'LOS!';
+        el.classList.add('go');
+        audio.tone(880, 0.35, 0.14, 'square');
+      }
+      el.style.animation = 'none';
+      void el.offsetWidth;
+      el.style.animation = '';
+    }
+    if (countT <= 0) {
+      state = 'run';
+      setTimeout(() => $('sl-count').classList.add('hidden'), 600);
+    }
+  }
+
+  if (state === 'run') {
+    acc += dt;
+    let first = true;
+    while (acc >= FIXED) {
+      acc -= FIXED;
+      if (respawnT > 0 && sim.crashed) {
+        respawnT -= FIXED;
+        sim.update(FIXED, inp);
+        runTime += FIXED;
+        if (respawnT <= 0) respawn();
+        continue;
+      }
+      const px = sim.x;
+      const pz = sim.z;
+      sim.update(FIXED, { ...inp, jumpPressed: first && inp.jumpPressed });
+      first = false;
+      runTime += FIXED;
+      topSpeed = Math.max(topSpeed, sim.speed);
+      if (!sim.crashed) checkCourse(px, pz);
+      if (state !== 'run') break;
+    }
+    handleEvents();
+    if (comboT > 0) {
+      comboT -= dt;
+      if (comboT <= 0) streak = 0;
+    }
+  } else if (state === 'finish') {
+    finishT += dt;
+    // Auslaufen: bremsen und zur Mitte lenken
+    const c = centerOfCourse(sim.z);
+    const steer = clampN((c - sim.x) * 0.05, -0.6, 0.6);
+    acc += dt;
+    while (acc >= FIXED) {
+      acc -= FIXED;
+      sim.update(FIXED, { steer, tuck: false, brake: true, jump: false, jumpPressed: false, flipAxis: 0 });
+      const f = fenceCheck(sim.x, sim.z);
+      if (f) {
+        sim.x = f.x;
+        sim.vx *= 0.5;
+      }
+    }
+    handleEvents();
+  } else if (state === 'countdown') {
+    sim.vx = sim.vz = 0;
+  }
+
+  if (boostEdge && state === 'run' && !sim.crashed && meter >= 20 && sim.boostT <= 0) {
+    sim.boostT = 0.7 + (meter / 100) * 2.6;
+    meter = 0;
+    shake = Math.max(shake, 0.35);
+    audio.boost();
+    popup('BOOST', 'gate');
+  }
+  boostEdge = false;
+  jumpEdge = false;
+
+  world.update(dt, sim.z, time);
+
+  if (state === 'run' && sim.grounded && sim.carve > 0.15 && sim.speed > 6) {
+    const side = Math.cos(sim.heading);
+    const n = Math.ceil(sim.carve * sim.speed * 0.09);
+    spray.emit(sim.x, sim.y + 0.1, sim.z, -sim.vx * 0.12 + side * (Math.random() - 0.5) * 4, 1.5 + sim.carve * 2.5, -sim.vz * 0.12, 2.5, n);
+  }
+  spray.update(dt);
+  if (state === 'run') trail.add(sim.x, sim.y, sim.z, sim.heading, sim.grounded && !sim.crashed && sim.speed > 3);
+  if (sim.boostT > 0 && state === 'run') spray.emit(sim.x, sim.y + 0.8, sim.z, -sim.vx * 0.08, 0.5, -sim.vz * 0.08, 3, 3);
+
+  poseSkier(dt, inp);
+  updateCamera(dt);
+  snowfall.update(dt, camera.position, time);
+  mountains.position.set(camera.position.x, sim.y, camera.position.z);
+
+  const sd = THEMES[themeIdx].sunDir;
+  sun.position.set(sim.x + sd[0], sim.y + sd[1], sim.z + sd[2]);
+  sun.target.position.set(sim.x, sim.y, sim.z);
+  sun.target.updateMatrixWorld();
+
+  audio.update(sim.speed, sim.carve, sim.grounded, state === 'run');
+
+  hudT += dt;
+  if (hudT > 0.05) {
+    hudT = 0;
+    if (state === 'run' || state === 'countdown') updateHud();
+  }
+
+  renderer.render(scene, camera);
+}
+
+$('m-best').textContent = save.bestTime
+  ? `Bestzeit ${formatTime(save.bestTime)} · Bestpunkte ${save.bestScore.toLocaleString('de-CH')}`
+  : 'Noch keine Zeit – fahr die erste!';
+applyTheme(0);
+world.update(0, sim.z, 0);
+window.__dbg = {
+  sim, world, camera, startRun, courseHeight, GATES, FINISH_T,
+  get state() { return state; },
+  get nextGate() { return nextGate; },
+  get stats() { return { runTime, penalty, points, gatesHit, gatesMissed }; },
+};
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

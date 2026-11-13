@@ -1,0 +1,43 @@
+/* Zusatz-Styles für den Slalom-Modus */
+.sl-top { position: absolute; left: 0; right: 0; top: 14px; display: flex; flex-direction: column; align-items: center; }
+.sl-time { font-size: clamp(44px, 7vw, 76px); font-weight: 900; font-style: italic; letter-spacing: -1px; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.sl-pen { min-height: 22px; margin-top: 2px; font-size: 18px; font-weight: 800; font-style: italic; color: #ff8c8c; font-variant-numeric: tabular-nums; }
+.sl-pen.flash { animation: penflash 0.6s ease-out; }
+@keyframes penflash { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
+.sl-progress { position: relative; width: min(420px, 60vw); margin-top: 8px; height: 14px; }
+.sl-track { position: absolute; left: 0; right: 0; top: 5px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.3); overflow: hidden; }
+#sl-fill { height: 100%; width: 0; background: #fff; }
+.sl-dots { position: absolute; inset: 0; }
+.sl-dots i { position: absolute; top: 3px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: rgba(255,255,255,0.55);
+  box-shadow: 0 1px 4px rgba(0,20,50,0.5); }
+.sl-dots i.hit { background: #56e39a; }
+.sl-dots i.miss { background: #ff5a5a; }
+.sl-dots i.sec { top: 1px; width: 4px; height: 12px; margin-left: -2px; border-radius: 2px; background: rgba(255,255,255,0.9); }
+.sl-split { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-weight: 900; font-style: italic;
+  font-size: clamp(26px, 4.6vw, 48px); animation: pop 2.4s ease-out forwards; }
+.sl-split small { display: block; font-size: 0.42em; letter-spacing: 3px; text-transform: uppercase; opacity: 0.85; }
+.sl-split.fast { color: #56e39a; }
+.sl-split.slow { color: #ff8c8c; }
+.sl-count { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(90px, 20vw, 220px); font-weight: 900;
+  font-style: italic; line-height: 1; text-shadow: 0 6px 40px rgba(0,30,70,0.55); animation: count 1s ease-out infinite; }
+.sl-count.go { color: #56e39a; }
+@keyframes count { 0% { transform: scale(1.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: scale(0.95); opacity: 0.9; } }
+.pop.gate { color: #56e39a; }
+.pop.pen { color: #ff8c8c; }
+
+.sl-sections { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 22px; }
+.sl-sections div { padding: 8px 4px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+.sl-sections b { display: block; font-size: 22px; font-weight: 900; font-style: italic; color: var(--accent); }
+.sl-sections span { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.8; }
+.tip a { color: var(--ice); text-decoration: none; font-weight: 700; pointer-events: auto; }
+
+.sl-rows { margin: 12px auto 4px; max-width: 360px; text-align: left; }
+.sl-rows div { display: flex; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,0.12); font-size: 15px; }
+.sl-rows span { opacity: 0.8; }
+.sl-rows b { font-variant-numeric: tabular-nums; }
+.sl-rows .total { border-bottom: 0; font-size: 18px; font-weight: 900; }
+.sl-rows .total span { opacity: 1; }
+#o-medal.gold { color: #ffd23f; }
+#o-medal.silver { color: #dfe6ee; }
+#o-medal.bronze { color: #e0955a; }

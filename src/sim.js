@@ -6,14 +6,16 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const TWO_PI = Math.PI * 2;
 
 export class SkierSim {
-  constructor() {
+  // terrain: optional { heightAt, gradientAt, normalAt } (Standard: endloses Gelände)
+  constructor(terrain) {
+    this.terrain = terrain || { heightAt, gradientAt, normalAt };
     this.reset();
   }
 
-  reset() {
-    this.x = 0;
-    this.z = 0;
-    this.y = heightAt(0, 0);
+  reset(x0 = 0, z0 = 0) {
+    this.x = x0;
+    this.z = z0;
+    this.y = this.terrain.heightAt(x0, z0);
     this.vx = 0;
     this.vz = -6;
     this.vy = 0;
@@ -44,7 +46,7 @@ export class SkierSim {
       this.vz *= Math.exp(-2.2 * dt);
       this.x += this.vx * dt;
       this.z += this.vz * dt;
-      this.y = Math.max(this.y - 0, heightAt(this.x, this.z));
+      this.y = Math.max(this.y - 0, this.terrain.heightAt(this.x, this.z));
       return;
     }
     if (this.boostT > 0) {
@@ -61,7 +63,7 @@ export class SkierSim {
     const turnRate = 2.6 - 1.5 * clamp(sp / 50, 0, 1);
     this.heading = clamp(this.heading + inp.steer * turnRate * dt, -1.4, 1.4);
 
-    const g = gradientAt(this.x, this.z);
+    const g = this.terrain.gradientAt(this.x, this.z);
     const k = G / (1 + g.x * g.x + g.z * g.z);
     this.vx += -g.x * k * dt;
     this.vz += -g.z * k * dt;
@@ -90,7 +92,7 @@ export class SkierSim {
 
     const nx = this.x + this.vx * dt;
     const nz = this.z + this.vz * dt;
-    const gNew = heightAt(nx, nz);
+    const gNew = this.terrain.heightAt(nx, nz);
     const vyBall = this.vy - G * dt;
     const yBall = this.y + vyBall * dt;
     if (inp.jump && inp.jumpPressed) {
@@ -134,12 +136,12 @@ export class SkierSim {
     this.x += this.vx * dt;
     this.z += this.vz * dt;
     this.y += this.vy * dt;
-    const gy = heightAt(this.x, this.z);
+    const gy = this.terrain.heightAt(this.x, this.z);
     if (this.y <= gy) this.land(gy);
   }
 
   land(gy) {
-    const n = normalAt(this.x, this.z);
+    const n = this.terrain.normalAt(this.x, this.z);
     const impact = -(this.vx * n.x + this.vy * n.y + this.vz * n.z);
     const a = Math.abs(this.spin) % Math.PI;
     const spinErr = Math.min(a, Math.PI - a);

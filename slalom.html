@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Skifahren – Slalom</title>
+<link rel="stylesheet" href="src/style.css">
+<link rel="stylesheet" href="src/slalom/slalom.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vignette"></div>
+
+<div id="hud" class="hidden">
+  <div class="sl-top">
+    <div class="sl-time" id="sl-time">0.00</div>
+    <div class="sl-pen" id="sl-pen"></div>
+    <div class="sl-progress" id="sl-progress"><div class="sl-track"><div id="sl-fill"></div></div><div class="sl-dots" id="sl-dots"></div></div>
+  </div>
+  <div class="hud-left">
+    <div class="speed"><span id="speed">0</span><small>km/h</small></div>
+    <div class="dist" id="dist">Tor 0 / 0</div>
+    <div id="boostwrap" class="boostwrap"><span>BOOST <kbd>E</kbd></span><div class="bar"><div id="boostbar"></div></div></div>
+  </div>
+  <div class="hud-right">
+    <div class="score" id="score">0</div>
+    <div class="best" id="best"></div>
+    <div id="combowrap" class="hidden"><div id="combo" class="combo">x1.0</div><div class="bar"><div id="combobar"></div></div></div>
+  </div>
+  <div class="sl-split hidden" id="sl-split"></div>
+  <div id="popups"></div>
+  <div class="mute" id="mute">Ton an (M) · Neustart (R)</div>
+  <div class="sl-count hidden" id="sl-count">3</div>
+</div>
+
+<div id="touchui" class="hidden">
+  <div class="tbtn" id="b-tuck" data-btn="tuck">DUCKEN<small>Luft: Salto</small></div>
+  <div class="tbtn" id="b-grab" data-btn="grab">GRAB<small>in der Luft</small></div>
+  <div class="tbtn boost" data-btn="boost">BOOST</div>
+  <div class="tbtn jump" data-btn="jump">SPRUNG</div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="eyebrow">Zeitrennen · Slalom-Parkour</div>
+    <h1>SLA<span>LOM</span></h1>
+    <p class="m-best" id="m-best"></p>
+    <div class="sl-sections">
+      <div><b>A</b><span>Slalom</span></div>
+      <div><b>B</b><span>Parkour</span></div>
+      <div><b>C</b><span>Riesen</span></div>
+      <div><b>D</b><span>Finale</span></div>
+    </div>
+    <button id="start" class="cta">Rennen starten <small>Leertaste</small></button>
+    <div class="controls">
+      <div><b>← → · A D</b><span>Carven, in der Luft: Drehung</span></div>
+      <div><b>↓ · S</b><span>Ducken = schneller</span></div>
+      <div><b>Leertaste</b><span>Sprung</span></div>
+      <div><b>↑ ↓ in der Luft</b><span>Salto</span></div>
+      <div><b>G halten in der Luft</b><span>Grab-Trick</span></div>
+      <div><b>E · Shift · R</b><span>Boost · Bremsen · Neustart</span></div>
+    </div>
+    <p class="tip">Fahr durch alle Tore zwischen den Stangen. Ein verpasstes Tor kostet <b>+2 s</b>, ein Sturz <b>+3 s</b>. Tricks auf den Schanzen und knappe Tore geben Punkte, Zeit gibt den Bonus.<span class="touch-only"><br>Am Handy am besten quer halten.</span></p>
+    <p class="tip"><a href="index.html">Zum Endlos-Modus →</a></p>
+  </div>
+</div>
+
+<div id="over" class="screen hidden">
+  <div class="panel">
+    <div class="eyebrow" id="o-medal">Im Ziel</div>
+    <div class="final" id="o-time">0.00</div>
+    <div id="o-new" class="newbest hidden">Neue Bestzeit!</div>
+    <div class="sl-rows">
+      <div><span>Fahrzeit</span><b id="o-raw">0.00</b></div>
+      <div><span>Strafsekunden</span><b id="o-pen">+0.00</b></div>
+      <div><span>Tore</span><b id="o-gates">0 / 0</b></div>
+      <div><span>Punkte</span><b id="o-points">0</b></div>
+      <div><span>Zeitbonus</span><b id="o-bonus">0</b></div>
+      <div class="total"><span>Gesamtpunkte</span><b id="o-score">0</b></div>
+    </div>
+    <div class="stats">
+      <div><span id="o-btime">–</span><small>Bestzeit</small></div>
+      <div><span id="o-bscore">0</span><small>Bestpunkte</small></div>
+      <div><span id="o-speed">0</span><small>Top-Tempo</small></div>
+      <div><span id="o-trick">0</span><small>Bester Trick</small></div>
+    </div>
+    <button id="retry" class="cta">Nochmal <small>Leertaste / R</small></button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module" src="src/slalom/game.js"></script>
+</body>
+</html>
