@@ -29,30 +29,81 @@ function noise(x, z) {
   );
 }
 
+// Schanzen-Typen: klein, mittel, groß
+const KTYPES = [
+  { type: 0, len: 8, h: 1.7, w: 6.5 },
+  { type: 1, len: 11, h: 2.8, w: 8.5 },
+  { type: 2, len: 15, h: 4.6, w: 11 },
+];
+const EMPTY = [];
+const kCache = new Map();
+
+export function kickersForCell(k) {
+  if (k < 1) return EMPTY;
+  const hit = kCache.get(k);
+  if (hit) return hit;
+  let out = EMPTY;
+  const r = hash(k * 7.31);
+  if (r <= 0.62) {
+    const z0 = -(k * CELL + 30 + hash(k * 3.7) * 50);
+    const x0 = centerX(z0) + (hash(k * 5.1) - 0.5) * 22;
+    const diff = Math.min(1, k / 30);
+    const t = hash(k * 9.9);
+    const ti = t < 0.5 - 0.2 * diff ? 0 : t < 0.85 - 0.1 * diff ? 1 : 2;
+    if (r < 0.07) {
+      // Jump-Line: drei Schanzen hintereinander, jede etwas größer
+      out = [0, 1, 2].map((i) => {
+        const zz = z0 - i * 46;
+        const kt = KTYPES[Math.min(2, i)];
+        return { ...kt, z0: zz, x0: centerX(zz) + (hash(k * 2.3 + i) - 0.5) * 6 };
+      });
+    } else {
+      out = [{ ...KTYPES[ti], z0, x0 }];
+    }
+  }
+  kCache.set(k, out);
+  return out;
+}
+
 export function kickerForCell(k) {
-  if (k < 1 || hash(k * 7.31) > 0.62) return null;
-  const z0 = -(k * CELL + 30 + hash(k * 3.7) * 50);
-  const x0 = centerX(z0) + (hash(k * 5.1) - 0.5) * 22;
-  return { z0, x0, w: 7 + hash(k * 9.9) * 3 };
+  const a = kickersForCell(k);
+  return a.length ? a[0] : null;
 }
 
 export function kickerHeight(x, z) {
   const kc = Math.floor(-z / CELL);
   let h = 0;
-  for (let k = kc - 1; k <= kc + 1; k++) {
-    const kk = kickerForCell(k);
-    if (!kk) continue;
-    const u = kk.z0 - z;
-    if (u < 0 || u > KICKER_LEN + 2.5) continue;
-    const wx = smoothstep(kk.w, kk.w * 0.45, Math.abs(x - kk.x0));
-    if (wx <= 0) continue;
-    const shape =
-      u <= KICKER_LEN
-        ? KICKER_H * Math.pow(u / KICKER_LEN, 1.6)
-        : KICKER_H * (1 - (u - KICKER_LEN) / 2.5);
-    h += shape * wx;
+  for (let k = kc - 2; k <= kc + 1; k++) {
+    const list = kickersForCell(k);
+    for (let n = 0; n < list.length; n++) {
+      const kk = list[n];
+      const u = kk.z0 - z;
+      if (u < 0 || u > kk.len + 2.5) continue;
+      const wx = smoothstep(kk.w, kk.w * 0.45, Math.abs(x - kk.x0));
+      if (wx <= 0) continue;
+      const shape =
+        u <= kk.len ? kk.h * Math.pow(u / kk.len, 1.6) : kk.h * (1 - (u - kk.len) / 2.5);
+      h += shape * wx;
+    }
   }
   return h;
+}
+
+// Dreiecks-Indizes eines Gitters (nx+1) x (nz+1); Vorderseite zeigt nach oben (+Y),
+// wenn Zeilen in -Z-Richtung und Spalten in +X-Richtung laufen.
+export function gridIndices(nx, nz) {
+  const nx1 = nx + 1;
+  const idx = [];
+  for (let j = 0; j < nz; j++) {
+    for (let i = 0; i < nx; i++) {
+      const a = j * nx1 + i;
+      const b = a + 1;
+      const c = a + nx1;
+      const d = c + 1;
+      idx.push(a, b, c, b, d, c);
+    }
+  }
+  return idx;
 }
 
 export function heightAt(x, z) {
@@ -61,7 +112,7 @@ export function heightAt(x, z) {
   const bank = Math.max(0, d - PISTE_HALF);
   let h = SLOPE * z;
   h += noise(x, z) * (0.12 + off * 1.3);
-  h += Math.min(60, bank * bank * 0.012);
+  h += Math.min(110, bank * bank * 0.012 + bank * 0.1);
   h += kickerHeight(x, z);
   return h;
 }

@@ -113,3 +113,15 @@ body.touch .mute { display: none; }
 .goals li.done::before { content: "\2713"; opacity: 1; }
 .pop.gate { color: #ff9d42; }
 @media (max-height: 460px) { .goals { margin: 8px 0; padding: 6px 12px; } .goals ul { font-size: 12px; } }
+
+/* Boost-Balken, 4 Touch-Buttons */
+.boostwrap { margin-top: 10px; width: min(190px, 40vw); font-size: 12px; font-weight: 800; letter-spacing: 2px; opacity: 0.9; }
+.boostwrap kbd { font-family: inherit; font-size: 10px; padding: 1px 6px; border: 1px solid rgba(255,255,255,0.6); border-radius: 4px; letter-spacing: 0; }
+.boostwrap .bar { height: 9px; border-radius: 5px; background: rgba(11,18,32,0.45); }
+#boostbar { width: 0; background: #6fd3ff; transition: width 0.12s; }
+.boostwrap.ready #boostbar { background: #ffd23f; }
+.boostwrap.ready { opacity: 1; }
+.boostwrap.active #boostbar { background: #ff5a1f; }
+.tbtn.boost { background: #1f8fd6; border-color: rgba(255,255,255,0.6); }
+.tbtn { min-width: 0; flex: 1 1 0; max-width: 150px; padding: 14px 6px; font-size: 15px; }
+.tbtn.on { background: rgba(255,210,63,0.6); }

@@ -1,7 +1,7 @@
 import { SkierSim } from './sim.js';
 import { heightAt, gradientAt, centerX } from './terrain.js';
 import { GameAudio } from './audio.js';
-import { Spray, Snowfall } from './fx.js';
+import { Spray, Snowfall, Trail } from './fx.js';
 import { createSkier } from './skier-model.js';
 import { World } from './world.js';
 
@@ -15,22 +15,24 @@ const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
 const isTouch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouch, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 2));
+const PR_MAX = Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 1.75);
+let pr = PR_MAX;
+renderer.setPixelRatio(pr);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 
 const scene = new THREE.Scene();
 const HORIZON = new THREE.Color(0xcfe2f3).convertSRGBToLinear();
-scene.fog = new THREE.FogExp2(HORIZON, 0.0032);
+scene.fog = new THREE.FogExp2(HORIZON, 0.0027);
 
 // Tageszeiten: wechseln pro Lauf
 const THEMES = [
-  { name: 'Tag', sky: ['#2f6fc0', '#7fb4e6', '#cfe2f3', '#e8f1fa'], fog: 0xcfe2f3, sun: 0xfff1d6, sunI: 2.2, hemi: [0xcfe6ff, 0xdfe8f5, 0.75], mt: 0xffffff, sunDir: [-70, 110, 60], exp: 0.95 },
-  { name: 'Sonnenuntergang', sky: ['#35457f', '#c8718a', '#f4a56a', '#ffd9a0'], fog: 0xf0b88a, sun: 0xffa45c, sunI: 2.0, hemi: [0xffc9a0, 0xe9c4c4, 0.65], mt: 0xffc9b0, sunDir: [-120, 45, -80], exp: 1.0 },
-  { name: 'Blaue Stunde', sky: ['#0d1b3d', '#2c4a86', '#6f8fc4', '#aebfe0'], fog: 0x8fa5cf, sun: 0xaecbff, sunI: 1.3, hemi: [0x9fb6e8, 0xb9c6e4, 0.7], mt: 0xb4c4ee, sunDir: [80, 90, 70], exp: 1.05 },
+  { name: 'Tag', sky: ['#2f6fc0', '#7fb4e6', '#cfe2f3', '#e8f1fa'], fog: 0xcfe2f3, sun: 0xfff1d6, sunI: 2.0, hemi: [0xbfd8f5, 0xaebfd8, 0.7], mt: 0xffffff, sunDir: [-70, 80, 60], exp: 0.85 },
+  { name: 'Sonnenuntergang', sky: ['#35457f', '#c8718a', '#f4a56a', '#ffd9a0'], fog: 0xf0b88a, sun: 0xffa45c, sunI: 1.9, hemi: [0xffc9a0, 0xc9a9b4, 0.6], mt: 0xffc9b0, sunDir: [-120, 45, -80], exp: 0.95 },
+  { name: 'Blaue Stunde', sky: ['#0d1b3d', '#2c4a86', '#6f8fc4', '#aebfe0'], fog: 0x8fa5cf, sun: 0xaecbff, sunI: 1.3, hemi: [0x9fb6e8, 0x8fa0c8, 0.7], mt: 0xb4c4ee, sunDir: [80, 90, 70], exp: 1.0 },
 ];
 let themeIdx = 0;
 function makeSky(stops) {
@@ -51,18 +53,18 @@ function makeSky(stops) {
 }
 scene.background = makeSky(THEMES[0].sky);
 
-const camera = new THREE.PerspectiveCamera(64, 1, 0.1, 3500);
+const camera = new THREE.PerspectiveCamera(64, 1, 0.1, 2600);
 
 const hemi = new THREE.HemisphereLight(0xcfe6ff, 0xdfe8f5, 0.75);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
 sun.castShadow = true;
-sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
+sun.shadow.mapSize.set(isTouch ? 1024 : 1536, isTouch ? 1024 : 1536);
 const sc = sun.shadow.camera;
-sc.left = -60;
-sc.right = 60;
-sc.top = 60;
-sc.bottom = -60;
+sc.left = -48;
+sc.right = 48;
+sc.top = 48;
+sc.bottom = -48;
 sc.near = 10;
 sc.far = 320;
 sun.shadow.bias = -0.0006;
@@ -86,7 +88,9 @@ const mtMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
       const snow = Math.min(1, Math.max(0, (t - 0.45) / 0.25));
       const rock = [0.36, 0.45, 0.62];
       const wht = [0.95, 0.97, 1.0];
-      for (let k = 0; k < 3; k++) cols[v * 3 + k] = Math.pow(lerp(rock[k], wht[k], snow), 2.2);
+      const low = Math.max(0, 1 - t / 0.3) * 0.85;
+      const fogc = [0.81, 0.89, 0.95];
+      for (let k = 0; k < 3; k++) cols[v * 3 + k] = Math.pow(lerp(lerp(rock[k], wht[k], snow), fogc[k], low), 2.2);
     }
     geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
     const m = new THREE.Mesh(geo, mat);
@@ -100,6 +104,7 @@ const mtMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
 const world = new World(scene);
 const spray = new Spray(scene);
 const snowfall = new Snowfall(scene, isTouch ? 600 : 1400);
+const trail = new Trail(scene);
 const skier = createSkier();
 scene.add(skier.root);
 const audio = new GameAudio();
@@ -123,11 +128,13 @@ function applyTheme(i) {
 // ---------- Eingabe ----------
 const keys = new Set();
 let jumpEdge = false;
+let boostEdge = false;
 let startEdge = false;
 window.addEventListener('keydown', (e) => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
   if (!keys.has(e.code)) {
     if (e.code === 'Space') jumpEdge = true;
+    if (e.code === 'KeyE') boostEdge = true;
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR') startEdge = true;
     if (e.code === 'KeyM') {
       const m = audio.toggleMute();
@@ -141,7 +148,7 @@ window.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
 
 // Touch: linke/rechte Bildschirmhälfte lenkt, Buttons unten Mitte: Ducken/Salto und Sprung
-const touch = { left: false, right: false, tuck: false };
+const touch = { left: false, right: false, tuck: false, grab: false };
 const touchRoles = new Map(); // Finger-ID -> left | right | tuck | jump
 function roleFor(t) {
   const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -150,13 +157,15 @@ function roleFor(t) {
   return t.clientX < window.innerWidth / 2 ? 'left' : 'right';
 }
 function syncTouch() {
-  touch.left = touch.right = touch.tuck = false;
+  touch.left = touch.right = touch.tuck = touch.grab = false;
   for (const r of touchRoles.values()) {
     if (r === 'left') touch.left = true;
     else if (r === 'right') touch.right = true;
     else if (r === 'tuck') touch.tuck = true;
+    else if (r === 'grab') touch.grab = true;
   }
   $('b-tuck').classList.toggle('on', touch.tuck);
+  $('b-grab').classList.toggle('on', touch.grab);
 }
 window.addEventListener('touchstart', (e) => {
   audio.init();
@@ -164,7 +173,8 @@ window.addEventListener('touchstart', (e) => {
     const role = roleFor(t);
     touchRoles.set(t.identifier, role);
     if (role === 'jump') jumpEdge = true;
-    if (state !== 'playing' && role !== 'jump' && role !== 'tuck') startEdge = true;
+    if (role === 'boost') boostEdge = true;
+    if (state !== 'playing' && !['jump', 'tuck', 'grab', 'boost'].includes(role)) startEdge = true;
   }
   syncTouch();
 }, { passive: true });
@@ -196,6 +206,7 @@ function readInput() {
     jump: keys.has('Space'),
     jumpPressed: jumpEdge,
     flipAxis: (up ? 1 : 0) - (down ? 1 : 0),
+    grab: keys.has('KeyG') || touch.grab,
   };
 }
 
@@ -223,6 +234,12 @@ let gatesHit = 0;
 let bestSpins = 0;
 let bestAir = 0;
 let runCount = 0;
+let meter = 0; // Boost-Energie 0..100
+let bigAirs = 0;
+
+function addMeter(v) {
+  meter = Math.min(100, meter + v);
+}
 
 const GOALS = [
   { id: 'd500', text: '500 m weit fahren', test: (r) => r.dist >= 500 },
@@ -269,6 +286,7 @@ function popup(text, cls = '') {
 function award(points, label, cls) {
   const p = Math.round(points * mult());
   trickScore += p;
+  addMeter(Math.min(30, p / 25));
   bestTrick = Math.max(bestTrick, p);
   popup(`${label}  +${p}`, cls);
 }
@@ -286,6 +304,9 @@ function startRun() {
   gatesHit = 0;
   bestSpins = 0;
   bestAir = 0;
+  meter = 0;
+  bigAirs = 0;
+  trail.clear();
   overTimer = 0;
   applyTheme(runCount++);
   camYaw = 0;
@@ -344,14 +365,24 @@ function handleEvents() {
         bestAir = Math.max(bestAir, e.airTime);
       }
       if (big && e.clean) {
-        const pts = e.airTime * 60 + e.spins * 150 + e.flips * 350;
+        let pts = e.airTime * 60 + e.spins * 150 + e.flips * 350;
         const parts = [];
+        if (e.grab > 0.35) {
+          parts.push('GRAB');
+          pts += e.grab * 90;
+        }
         if (e.flips) parts.push(e.flips > 1 ? `${e.flips}x FLIP` : 'FLIP');
         if (e.spins) parts.push(`${e.spins * 180}°`);
+        if (e.airTime > 1.3) {
+          parts.unshift(e.airTime > 2 ? 'MEGA AIR' : 'HUGE AIR');
+          pts += e.airTime * 120;
+          bigAirs++;
+          audio.huge();
+        }
         if (!parts.length) parts.push(`AIR ${e.airTime.toFixed(1)}s`);
         streak++;
         comboT = 5;
-        award(pts, parts.join(' + '), e.spins + e.flips > 0 ? 'trick' : 'air');
+        award(pts, parts.join(' + '), e.spins + e.flips > 0 || e.grab > 0.35 ? 'trick' : 'air');
         audio.trick(Math.min(6, e.spins + e.flips * 2));
       } else if (big && !e.clean) {
         popup('WACKELIG', 'bad');
@@ -383,6 +414,7 @@ function checkObstacles() {
     if (!o.counted && dist < o.r + 1.8 && above < top && sim.speed > 14) {
       o.counted = true;
       closeCalls++;
+      addMeter(8);
       streak++;
       comboT = 5;
       award(40 + sim.speed, 'KNAPP', 'close');
@@ -403,6 +435,7 @@ function checkGates(prevZ) {
         streak++;
         comboT = 5;
         sim.boost(5);
+        addMeter(25);
         shake = Math.max(shake, 0.2);
         award(100 + gatesHit * 10, `TOR ${gatesHit}`, 'gate');
         audio.gate(gatesHit);
@@ -438,13 +471,15 @@ function poseSkier(dt, inp) {
       rig.rotation.set(-sim.flip * 1 + slope * 0.4, -sim.heading - sim.spin, lean * 0.5);
     }
   }
-  const wantTuck = (inp.tuck && sim.grounded ? 1 : 0) + (!sim.grounded ? 0.5 : 0);
+  const grabK = sim.grabbing && !sim.grounded ? 1 : 0;
+  m.grab = damp(m.grab || 0, grabK, 14, dt);
+  const wantTuck = (inp.tuck && sim.grounded ? 1 : 0) + (!sim.grounded ? 0.5 : 0) + grabK * 0.7;
   m.tuck = damp(m.tuck, wantTuck, 10, dt);
   m.torsoPivot.rotation.x = -0.15 - m.tuck * 0.85;
-  m.torsoPivot.position.y = 0.62 - m.tuck * 0.18;
+  m.torsoPivot.position.y = 0.62 - m.tuck * 0.18 - m.grab * 0.12;
   m.head.rotation.x = m.tuck * 0.5;
   for (let i = 0; i < 2; i++) {
-    m.arms[i].rotation.x = -0.4 - m.tuck * 0.9;
+    m.arms[i].rotation.x = -0.4 - m.tuck * 0.9 - (i === 0 ? m.grab * 1.1 : 0);
     m.arms[i].rotation.z = (i === 0 ? 1 : -1) * (0.25 + (sim.grounded ? 0 : 0.5));
   }
 }
@@ -485,7 +520,7 @@ function updateCamera(dt) {
       shake = Math.max(0, shake - dt * 2.2);
     }
     camera.lookAt(sim.x + Math.sin(camYaw) * 6, sim.y + 1.2, sim.z - Math.cos(camYaw) * 6);
-    const wantFov = 62 + clampN(sp, 0, 70) * 0.5 + (sim.grounded ? 0 : 4);
+    const wantFov = 62 + clampN(sp, 0, 70) * 0.5 + (sim.grounded ? 0 : 4) + (sim.boostT > 0 ? 9 : 0);
     fov = damp(fov, wantFov, 3, dt);
   }
   // Hochformat (Handy): größeres vertikales Sichtfeld, damit die Piste breit genug wirkt
@@ -503,6 +538,9 @@ function updateHud() {
   $('score').textContent = Math.round(score).toLocaleString('de-CH');
   $('best').textContent = 'Bestwert ' + best.toLocaleString('de-CH');
   $('dist').textContent = Math.round(-sim.z) + ' m';
+  $('boostbar').style.width = meter + '%';
+  $('boostwrap').classList.toggle('ready', meter >= 20);
+  $('boostwrap').classList.toggle('active', sim.boostT > 0);
   const cb = $('combo');
   if (streak > 0 && comboT > 0) {
     cb.classList.remove('hidden');
@@ -529,6 +567,27 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+// ---------- Adaptive Auflösung (gegen Lag) ----------
+let ema = 16;
+let adaptT = 0;
+function adapt(dt) {
+  ema = ema * 0.95 + dt * 1000 * 0.05;
+  adaptT += dt;
+  if (adaptT < 1.2) return;
+  adaptT = 0;
+  if (ema > 24 && pr > 0.6) {
+    pr = Math.max(0.6, pr * 0.85);
+    renderer.setPixelRatio(pr);
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+  } else if (ema > 30 && pr <= 0.6 && sun.castShadow) {
+    sun.castShadow = false;
+  } else if (ema < 15 && pr < PR_MAX) {
+    pr = Math.min(PR_MAX, pr * 1.08);
+    renderer.setPixelRatio(pr);
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+  }
+}
+
 // ---------- Hauptschleife ----------
 let last = performance.now();
 const FIXED = 1 / 120;
@@ -548,6 +607,7 @@ requestAnimationFrame(frame);
   }
 
   const inp = readInput();
+  adapt(dt);
 
   if (state === 'playing') {
     acc += dt;
@@ -580,6 +640,14 @@ requestAnimationFrame(frame);
     overTimer += dt;
     sim.update(dt, inp);
   }
+  if (boostEdge && state === 'playing' && !sim.crashed && meter >= 20 && sim.boostT <= 0) {
+    sim.boostT = 0.7 + (meter / 100) * 2.6;
+    meter = 0;
+    shake = Math.max(shake, 0.35);
+    audio.boost();
+    popup('BOOST', 'gate');
+  }
+  boostEdge = false;
   jumpEdge = false;
 
   world.update(sim.z, state === 'playing' || state === 'over' ? 1 : 0);
@@ -595,6 +663,8 @@ requestAnimationFrame(frame);
     );
   }
   spray.update(dt);
+  if (state === 'playing') trail.add(sim.x, sim.y, sim.z, sim.heading, sim.grounded && !sim.crashed && sim.speed > 3);
+  if (sim.boostT > 0 && state === 'playing') spray.emit(sim.x, sim.y + 0.8, sim.z, -sim.vx * 0.08, 0.5, -sim.vz * 0.08, 3, 3);
 
   poseSkier(dt, inp);
   updateCamera(dt);

@@ -77,4 +77,43 @@ assert.ok(obstaclesInRange(-100, -1500).length > 100, 'Zu wenige Hindernisse');
   console.log('Tore ok:', gs.length);
 }
 
+
+// 8) Dreiecke zeigen nach oben (sonst wäre das Gelände unsichtbar)
+{
+  const { gridIndices, heightAt } = await import('../src/terrain.js');
+  const nx = 6, nz = 6, st = 2;
+  const idx = gridIndices(nx, nz);
+  const v = (n) => { const i = n % (nx + 1), j = Math.floor(n / (nx + 1)); const x = -20 + i * st, z = -300 - j * st; return [x, heightAt(x, z), z]; };
+  let up = 0;
+  for (let t = 0; t < idx.length; t += 3) {
+    const [a, b, c] = [v(idx[t]), v(idx[t + 1]), v(idx[t + 2])];
+    const e1 = b.map((q, i) => q - a[i]);
+    const e2 = c.map((q, i) => q - a[i]);
+    const ny = e1[2] * e2[0] - e1[0] * e2[2];
+    if (ny > 0) up++;
+  }
+  assert.equal(up, idx.length / 3, 'Alle Dreiecke müssen nach oben zeigen');
+}
+
+// 9) Schanzen-Typen und Jump-Lines
+{
+  const { kickersForCell } = await import('../src/terrain.js');
+  let big = 0, line = 0;
+  for (let k = 1; k < 200; k++) {
+    const l = kickersForCell(k);
+    if (l.length === 3) line++;
+    if (l.some((q) => q.type === 2)) big++;
+  }
+  assert.ok(big >= 5, 'zu wenige große Schanzen: ' + big);
+  assert.ok(line >= 3, 'zu wenige Jump-Lines: ' + line);
+}
+
+// 10) Grab und Boost
+{
+  const s = new SkierSim();
+  s.boostT = 1;
+  for (let i = 0; i < 120; i++) s.update(1 / 60, none);
+  assert.ok(s.speed > 20 && s.boostT <= 0, 'Boost wirkt: ' + s.speed);
+}
+
 console.log('Alle Tests bestanden.');

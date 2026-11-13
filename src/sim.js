@@ -28,6 +28,9 @@ export class SkierSim {
     this.lean = 0; // geglättete Neigung für die Optik
     this.events = []; // werden pro Frame vom Spiel abgeholt
     this.maxSpeed = 0;
+    this.boostT = 0; // Restzeit des Boosts in s
+    this.grabTime = 0;
+    this.grabbing = false;
   }
 
   get speed() {
@@ -43,6 +46,10 @@ export class SkierSim {
       this.z += this.vz * dt;
       this.y = Math.max(this.y - 0, heightAt(this.x, this.z));
       return;
+    }
+    if (this.boostT > 0) {
+      this.boostT -= dt;
+      this.boost(30 * dt, 95);
     }
     if (this.grounded) this.stepGround(dt, inp);
     else this.stepAir(dt, inp);
@@ -107,6 +114,8 @@ export class SkierSim {
     this.airTime = 0;
     this.spin = 0;
     this.flip = 0;
+    this.grabTime = 0;
+    this.grabbing = false;
     this.x = nx;
     this.z = nz;
     this.y += this.vy * (1 / 60);
@@ -117,6 +126,8 @@ export class SkierSim {
     this.airTime += dt;
     this.spin += inp.steer * 7.0 * dt;
     this.flip += (inp.flipAxis || 0) * 6.0 * dt;
+    this.grabbing = !!inp.grab;
+    if (this.grabbing) this.grabTime += dt;
     this.vx *= 1 - 0.01 * dt;
     this.vz *= 1 - 0.01 * dt;
     this.vy -= G * dt;
@@ -157,10 +168,12 @@ export class SkierSim {
       spins,
       flips,
       clean: spinErr < 0.45 && flipErr < 0.45,
+      grab: this.grabTime,
       impact,
     });
     this.spin = 0;
     this.flip = 0;
+    this.grabbing = false;
   }
 
   crash(reason) {

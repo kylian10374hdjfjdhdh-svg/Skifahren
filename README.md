@@ -15,10 +15,12 @@ Endloses 3D-Skirennen im Browser (Three.js, kein Build-Schritt nötig): carven, 
 | ↓ / S | Ducken (schneller); in der Luft: Salto |
 | ↑ / W | in der Luft: Salto rückwärts |
 | Leertaste | Sprung |
+| G (in der Luft halten) | Grab-Trick |
+| E | Boost (Balken füllt sich durch Tricks, Tore, knappes Ausweichen) |
 | Shift | Bremsen |
 | M | Ton an/aus |
 
-Touch: linke/rechte Bildschirmhälfte lenkt.
+Touch: linke/rechte Bildschirmhälfte lenkt, Buttons für Ducken/Salto, Grab, Boost und Sprung.
 
 ## Entwicklung
 

@@ -1,13 +1,12 @@
 // Endlose Welt: Gelände wird in Chunks vor dem Skifahrer erzeugt und hinten entfernt.
-import { heightAt, centerX, obstaclesInRange, kickerHeight, smoothstep, PISTE_HALF, gatesInRange } from './terrain.js';
+import { heightAt, centerX, obstaclesInRange, kickerHeight, smoothstep, PISTE_HALF, gatesInRange, kickersForCell, gridIndices, CELL } from './terrain.js';
 
 const THREE = window.THREE;
 
 export const CS = 96; // Chunk-Länge
 const STEP = 2;
-const XMIN = -216;
-const XMAX = 216;
-const NX = (XMAX - XMIN) / STEP;
+const HALFW = 150;
+const NX = (HALFW * 2) / STEP;
 const NZ = CS / STEP;
 const lin = (v) => Math.pow(v, 2.2);
 const mix = (a, b, t) => a + (b - a) * t;
@@ -134,7 +133,7 @@ export class World {
   update(z, budget = 1) {
     const c = Math.max(0, Math.floor(-z / CS));
     let built = 0;
-    for (let k = c - 1; k <= c + 4; k++) {
+    for (let k = c - 1; k <= c + 5; k++) {
       if (k < 0 || this.chunks.has(k)) continue;
       if (built >= budget) break;
       this.chunks.set(k, this.buildChunk(k));
@@ -166,6 +165,7 @@ export class World {
 
   buildChunk(c) {
     const z0 = -c * CS;
+    const XMIN = Math.round((centerX(z0 - CS / 2) - HALFW) / STEP) * STEP;
     const nx1 = NX + 1;
     const nz1 = NZ + 1;
     const W = nx1 + 2;
@@ -198,34 +198,26 @@ export class World {
 
         const d = Math.abs(x - cx);
         const piste = 1 - smoothstep(PISTE_HALF - 2, PISTE_HALF + 5, d);
-        const groove = 0.025 * Math.sin(x * 0.9 + z * 0.04) + 0.015 * Math.sin(x * 2.3 - z * 0.3);
-        let r = mix(0.84, 0.95, piste) + groove;
-        let g = mix(0.89, 0.97, piste) + groove;
+        const cord = Math.sin(x * 1.7 + Math.sin(z * 0.02) * 2) * 0.03 + Math.sin(x * 0.5) * 0.02;
+        const powder = 0.02 * Math.sin(x * 0.31 + z * 0.23) + 0.015 * Math.sin(x * 0.9 - z * 0.6);
+        let r = mix(0.82 + powder, 0.93 + cord, piste);
+        let g = mix(0.87 + powder, 0.95 + cord, piste);
         let b = mix(0.97, 1.0, piste);
         const rock = smoothstep(0.82, 0.6, ny);
         r = mix(r, 0.4, rock);
         g = mix(g, 0.42, rock);
         b = mix(b, 0.48, rock);
         if (kickerHeight(x, z) > 0.03) {
-          r = mix(r, 0.72, 0.6);
-          g = mix(g, 0.86, 0.6);
-          b = mix(b, 1.0, 0.6);
+          r = mix(r, 0.45, 0.7);
+          g = mix(g, 0.78, 0.7);
+          b = mix(b, 1.0, 0.7);
         }
         colr[k * 3] = lin(r);
         colr[k * 3 + 1] = lin(g);
         colr[k * 3 + 2] = lin(b);
       }
     }
-    const idx = [];
-    for (let j = 0; j < NZ; j++) {
-      for (let i = 0; i < NX; i++) {
-        const a = j * nx1 + i;
-        const b = a + 1;
-        const cc = a + nx1;
-        const d = cc + 1;
-        idx.push(a, cc, b, b, cc, d);
-      }
-    }
+    const idx = gridIndices(NX, NZ);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
@@ -289,6 +281,30 @@ export class World {
     pm.castShadow = true;
     pm.frustumCulled = false;
     group.add(pm);
+
+    // Markierungsstangen an der Schanzenkante: von Weitem erkennbar
+    const lips = [];
+    for (let k = Math.max(1, Math.floor(-z0 / CELL) - 2); k <= Math.floor((CS - z0) / CELL) + 1; k++) {
+      for (const kk of kickersForCell(k)) {
+        const lz = kk.z0 - kk.len;
+        if (lz <= z0 && lz > z0 - CS) {
+          lips.push([kk.x0 - kk.w * 0.9, lz + 0.5], [kk.x0 + kk.w * 0.9, lz + 0.5]);
+        }
+      }
+    }
+    if (lips.length) {
+      const lm = new THREE.InstancedMesh(this.poleGeo, this.vcMat, lips.length);
+      lips.forEach(([x, z], i) => {
+        d.position.set(x, heightAt(x, z), z);
+        d.rotation.set(0, 0, 0);
+        d.scale.set(1.3, 1.3, 1.3);
+        d.updateMatrix();
+        lm.setMatrixAt(i, d.matrix);
+      });
+      lm.castShadow = true;
+      lm.frustumCulled = false;
+      group.add(lm);
+    }
 
     const gates = gatesInRange(z0, z0 - CS).map((g) => {
       const m = new THREE.Mesh(this.gateGeo, this.gateMat);

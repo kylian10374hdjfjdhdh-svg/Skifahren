@@ -14,6 +14,7 @@
   <div class="hud-left">
     <div class="speed"><span id="speed">0</span><small>km/h</small></div>
     <div class="dist" id="dist">0 m</div>
+    <div id="boostwrap" class="boostwrap"><span>BOOST <kbd>E</kbd></span><div class="bar"><div id="boostbar"></div></div></div>
   </div>
   <div class="hud-right">
     <div class="score" id="score">0</div>
@@ -25,7 +26,9 @@
 </div>
 
 <div id="touchui" class="hidden">
-  <div class="tbtn" id="b-tuck" data-btn="tuck">DUCKEN<small>in der Luft: Salto</small></div>
+  <div class="tbtn" id="b-tuck" data-btn="tuck">DUCKEN<small>Luft: Salto</small></div>
+  <div class="tbtn" id="b-grab" data-btn="grab">GRAB<small>in der Luft</small></div>
+  <div class="tbtn boost" data-btn="boost">BOOST</div>
   <div class="tbtn jump" data-btn="jump">SPRUNG</div>
 </div>
 
@@ -42,11 +45,15 @@
       <div><b>Leertaste</b><span>Sprung</span></div>
       <div><b>← →</b> in der Luft<span>Drehung</span></div>
       <div><b>↑ ↓</b> in der Luft<span>Salto</span></div>
+      <div><b>G</b> halten in der Luft<span>Grab-Trick</span></div>
+      <div><b>E</b><span>Boost (Balken füllen)</span></div>
       <div><b>Shift</b><span>Bremsen</span></div>
     </div>
     <div class="touch-help">
       <div><b>Linke / rechte Bildschirmhälfte halten</b><span>Lenken, in der Luft: Drehung</span></div>
       <div><b>DUCKEN</b><span>Schneller, in der Luft: Salto</span></div>
+      <div><b>GRAB</b><span>In der Luft halten: Extra-Punkte</span></div>
+      <div><b>BOOST</b><span>Wenn der Balken voll genug ist</span></div>
       <div><b>SPRUNG</b><span>Abspringen</span></div>
     </div>
     <p class="tip">Rampen anfahren, Tricks sauber landen, Hindernissen knapp ausweichen: Combo aufbauen, Highscore jagen.<span class="touch-only"><br>Am Handy am besten quer halten.</span></p>

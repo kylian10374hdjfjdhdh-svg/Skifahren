@@ -121,6 +121,15 @@ export class GameAudio {
     setTimeout(() => this.tone(b * 2, 0.3, 0.16, 'triangle'), 70);
     this.burst(2400, 0.25, 0.12, 'highpass');
   }
+  boost() {
+    this.tone(180, 0.6, 0.25, 'sawtooth', 3.5);
+    this.burst(900, 0.6, 0.35, 'bandpass');
+  }
+  huge() {
+    this.tone(440, 0.2, 0.2, 'triangle');
+    setTimeout(() => this.tone(660, 0.2, 0.2, 'triangle'), 100);
+    setTimeout(() => this.tone(880, 0.4, 0.22, 'triangle'), 200);
+  }
   start() {
     this.tone(330, 0.15, 0.2, 'triangle');
     setTimeout(() => this.tone(660, 0.25, 0.2, 'triangle'), 110);
